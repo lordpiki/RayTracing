@@ -7,13 +7,19 @@
 
 using std::vector;
 using glm::vec3;
+using glm::vec4;
+
+struct Material
+{
+    vec3 color;
+	float emission_strength;
+};
 
 struct Sphere
 {
     vec3 center;
     float radius;
-    vec3 color;
-    float pad; // padding to align with GLSL struct
+	Material material;
 };
 
 // Function to render the scene using the shader program
@@ -70,6 +76,8 @@ int main() {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
+
+    std::cout << "Sphere size: " << sizeof(Sphere) << std::endl;
 
     // Create a vector for the spheres
     vector<Sphere> spheres = {

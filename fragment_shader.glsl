@@ -23,12 +23,17 @@ struct Ray
     vec3 dir;
 };
 
+struct Material
+{
+    vec3 color;
+	float emission_strength;
+};
+
 struct Sphere
 {
     vec3 center;
     float radius;
-    vec3 color;
-    float pad; // padding to align with std140 layout
+	Material material;
 };
 
 layout(std140) uniform SphereBlock {
@@ -57,7 +62,7 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
     hitInfo.dst = dst;
     hitInfo.point = ray.origin + dst * ray.dir;
     hitInfo.normal = (hitInfo.point - center) / sphere.radius;
-    hitInfo.color = sphere.color;
+    hitInfo.color = sphere.material.color;
 
     return hitInfo;
 }
