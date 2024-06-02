@@ -7,12 +7,14 @@ uniform int height;
 uniform int numSpheres;
 
 #define MAX_SPHERES 5
-#define MAX_BOUNCE 6
+#define MAX_BOUNCE 5
 
 struct Material
 {
     vec3 color;
 	float emission_strength;
+	vec3 emmision_color;
+	float reflection_strength;
 };
 
 struct HitInfo
@@ -65,9 +67,9 @@ vec3 randomHemisphereDir(vec3 normal, vec2 co)
     vec3 rand = getRandomVector(co);
 	if (dot(rand, normal) < 0.0)
 	{
-		return -rand;
+		return rand;
 	}
-	return rand;
+	return -rand;
 }
 
 

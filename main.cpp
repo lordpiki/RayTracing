@@ -13,6 +13,8 @@ struct Material
 {
     vec3 color;
 	float emission_strength;
+	vec3 emmision_color;
+	float reflection_strength;
 };
 
 struct Sphere
@@ -56,7 +58,7 @@ int main() {
     }
 
     // Create a GLFW window
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Ray Tracing - FPS: ", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1200, 900, "Ray Tracing - FPS: ", NULL, NULL);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -79,13 +81,16 @@ int main() {
 
     std::cout << "Sphere size: " << sizeof(Sphere) << std::endl;
 
+	Sphere sun = { vec3(40.0f, -31.0f, -54.0f), 40.0f, vec3(1.0f, 1.0f, 1.0f), 5.0f };
+
     // Create a vector for the spheres
     vector<Sphere> spheres = {
-        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 1.0f, 0.0f), 0.0f},
-		{vec3(10.0f, -10.0f, -40.0f), 20.0f, vec3(1.0f, 1.0f, 1.0f), 1.0f},
-		{vec3(-2.0f, 0.0f, -4.0f), 1.0f, vec3(1.0f, 0.0f, 1.0f), 0.0f}
-
+        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 0.0f, 0.0f), 0.0f},
+		{vec3(-2.0f, 0.0f, -4.0f), 1.0f, vec3(1.0f, 1.0f, 0.0f), 0.0f},
+		{vec3(-2.0f, 11.0f, -4.0f), 10.0f, vec3(0.128f, 0.0f, 0.128f), 0.0f},
     };
+
+	spheres.push_back(sun);
 
     // Create and fill the sphere buffer
     GLuint sphereBuffer;
