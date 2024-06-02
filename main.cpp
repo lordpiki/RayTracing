@@ -3,32 +3,31 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include "shader.h"
+#include <vector>
 
+using std::vector;
 using glm::vec3;
 
 struct Sphere
 {
+    vec3 center;
+    float radius;
     vec3 color;
-	vec3 center;
-	float radius;
+    float pad; // padding to align with GLSL struct
 };
 
 // Function to render the scene using the shader program
-void renderScene(GLuint shaderProgram, int width, int height)
+void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffer, int numSpheres)
 {
     glUseProgram(shaderProgram);
-
-	Sphere sphere;
-	sphere.color = vec3(1.0f, 1.0f, 0.0f);
-	sphere.center = vec3(0.0f, 0.0f, -3.0f);
-	sphere.radius = 1.0f;
 
     // Set the uniform variables
     glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
     glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
-    glUniform3fv(glGetUniformLocation(shaderProgram, "sphereColor"), 1, &sphere.color[0]);
-    glUniform3fv(glGetUniformLocation(shaderProgram, "sphereCenter"), 1, &sphere.center[0]);
-    glUniform1f(glGetUniformLocation(shaderProgram, "sphereRadius"), sphere.radius);
+    glUniform1i(glGetUniformLocation(shaderProgram, "numSpheres"), numSpheres);
+
+    // Bind the sphere buffer
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, sphereBuffer);
 
     // Draw a full-screen quad
     glBegin(GL_TRIANGLES);
@@ -72,6 +71,21 @@ int main() {
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
+    // Create a vector for the spheres
+    vector<Sphere> spheres = {
+        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 1.0f, 0.0f), 0.0f},
+		{vec3(2.0f, 0.0f, -3.0f), 2.0f, vec3(0.0f, 1.0f, 1.0f), 0.0f},
+		{vec3(-2.0f, 0.0f, -4.0f), 1.0f, vec3(1.0f, 0.0f, 1.0f), 0.0f}
+
+    };
+
+    // Create and fill the sphere buffer
+    GLuint sphereBuffer;
+    glGenBuffers(1, &sphereBuffer);
+    glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
+    glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
     // Compile and link shaders
     GLuint shaderProgram = createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
 
@@ -95,7 +109,7 @@ int main() {
         }
 
         // Render the scene
-        renderScene(shaderProgram, width, height);
+        renderScene(shaderProgram, width, height, sphereBuffer, spheres.size());
 
         // Swap buffers
         glfwSwapBuffers(window);
