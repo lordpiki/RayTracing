@@ -4,13 +4,31 @@
 #include <iostream>
 #include "shader.h"
 
+using glm::vec3;
+
+struct Sphere
+{
+    vec3 color;
+	vec3 center;
+	float radius;
+};
+
 // Function to render the scene using the shader program
-void renderScene(GLuint shaderProgram, int width, int height) {
+void renderScene(GLuint shaderProgram, int width, int height)
+{
     glUseProgram(shaderProgram);
+
+	Sphere sphere;
+	sphere.color = vec3(1.0f, 1.0f, 0.0f);
+	sphere.center = vec3(0.0f, 0.0f, -3.0f);
+	sphere.radius = 1.0f;
 
     // Set the uniform variables
     glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
     glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
+    glUniform3fv(glGetUniformLocation(shaderProgram, "sphereColor"), 1, &sphere.color[0]);
+    glUniform3fv(glGetUniformLocation(shaderProgram, "sphereCenter"), 1, &sphere.center[0]);
+    glUniform1f(glGetUniformLocation(shaderProgram, "sphereRadius"), sphere.radius);
 
     // Draw a full-screen quad
     glBegin(GL_TRIANGLES);
