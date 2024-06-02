@@ -4,7 +4,8 @@ in vec2 texCoord;
 uniform int width;
 uniform int height;
 
-vec3 rayTrace(int x, int y, int width, int height) {
+vec3 rayTrace(int x, int y, int width, int height)
+{
     return vec3(float(x) / float(width), float(y) / float(height), 0.0f);
 }
 

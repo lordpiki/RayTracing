@@ -33,7 +33,7 @@ int main() {
     }
 
     // Create a GLFW window
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Ray Tracing", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Ray Tracing - FPS: ", NULL, NULL);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
@@ -57,8 +57,25 @@ int main() {
     // Compile and link shaders
     GLuint shaderProgram = createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
 
+    // Variables for FPS calculation
+    double lastTime = glfwGetTime();
+    int nbFrames = 0;
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
+        // Measure the time
+        double currentTime = glfwGetTime();
+        nbFrames++;
+
+        // If one second has passed, update the window title with the FPS
+        if (currentTime - lastTime >= 1.0) {
+            int fps = double(nbFrames) / (currentTime - lastTime);
+            std::string title = "Ray Tracing - FPS: " + std::to_string(fps);
+            glfwSetWindowTitle(window, title.c_str());
+            nbFrames = 0;
+            lastTime = currentTime;
+        }
+
         // Render the scene
         renderScene(shaderProgram, width, height);
 
