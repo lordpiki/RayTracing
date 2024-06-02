@@ -7,6 +7,8 @@ uniform int height;
 uniform int numSpheres;
 
 #define MAX_SPHERES 5
+#define RAND_MAX 1.0f
+#define MAX_BOUNCE 5
 
 struct HitInfo
 {
@@ -40,6 +42,34 @@ layout(std140) uniform SphereBlock {
     Sphere spheres[MAX_SPHERES]; // Max num of spheres
 };
 
+float getRandomVal(vec2 co)
+{
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float getRandomValNormalDistribution(vec2 co)
+{
+	float theta = 2.0 * 3.1415926535897932384626433832795 * getRandomVal(co);
+    float r = sqrt(-2.0 * log(getRandomVal(co)));
+    return r * cos(theta);
+}
+
+vec3 getRandomVector(vec2 co)
+{
+	return normalize(vec3(getRandomValNormalDistribution(co), getRandomValNormalDistribution(co + vec2(1.0, 0.0)), getRandomValNormalDistribution(co + vec2(0.0, 1.0))));
+}
+
+vec3 randomHemisphereDir(vec3 normal, vec2 co)
+{
+    vec3 rand = getRandomVector(co);
+	if (dot(rand, normal) < 0.0)
+	{
+		return -rand;
+	}
+	return rand;
+}
+
+
 HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
 {
     vec3 oc = center - ray.origin;
@@ -67,7 +97,32 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
     return hitInfo;
 }
 
-vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
+vec3 trace(Ray ray, vec2 co)
+{
+    for (int i = 0; i < MAX_BOUNCE; i++)
+    {
+        HitInfo closest;
+		for (int i = 0; i < numSpheres; i++)
+		{
+			HitInfo hit = hit_sphere(spheres[i].center, ray, spheres[i]);
+			if (hit.hit && hit.dst < closest.dst)
+			{
+				closest = hit;
+			}
+		}
+
+		if (!closest.hit)
+		{
+			return vec3(0, 0, 0);
+		}
+
+		ray.origin = closest.point;
+		ray.dir = randomHemisphereDir(closest.normal, co);
+	
+    }
+}
+
+vec3 frag(Ray ray, Sphere spheres[MAX_SPHERES])
 {
     HitInfo closest;
     closest.hit = false;
@@ -82,13 +137,13 @@ vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
         }
     }
 
-    if (closest.hit)
-    {
-        return closest.normal;
-    }
-
     vec3 unit_dir = normalize(ray.dir);
     float t = 0.5f * (unit_dir.y + 1.0f);
+    if (closest.hit)
+    {
+        return getRandomVector(vec2(t, 1-t));
+    }
+
     return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
 }
 
@@ -124,5 +179,5 @@ void main()
 
     Ray ray = ray_setup(x, y);
 
-    FragColor = vec4(rayTrace(ray, spheres), 1.0);
+    FragColor = vec4(frag(ray, spheres), 1.0);
 }
