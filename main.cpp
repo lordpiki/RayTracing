@@ -4,24 +4,97 @@
 #include <iostream>
 #include <vector>
 
-// Function to calculate color using ray tracing
-glm::vec3 rayTrace(int x, int y, int width, int height) {
-    // Placeholder: Return a gradient color based on position
-    return glm::vec3((float)x / width, (float)y / height, x / width);
+// Vertex shader source code
+const char* vertexShaderSource = R"(
+#version 330 core
+layout(location = 0) in vec2 aPos;
+out vec2 texCoord;
+void main() {
+    texCoord = (aPos + 1.0) / 2.0;
+    gl_Position = vec4(aPos, 0.0, 1.0);
+}
+)";
+
+// Fragment shader source code
+const char* fragmentShaderSource = R"(
+#version 330 core
+out vec4 FragColor;
+in vec2 texCoord;
+uniform int width;
+uniform int height;
+
+vec3 rayTrace(int x, int y, int width, int height) {
+    return vec3(float(x) / float(width), float(y) / float(height), 0.5f);
 }
 
-void renderScene(int width, int height) {
-    std::vector<glm::vec3> framebuffer(width * height);
+void main() {
+    int x = int(texCoord.x * float(width));
+    int y = int(texCoord.y * float(height));
+    vec3 color = rayTrace(x, y, width, height);
+    FragColor = vec4(color, 1.0);
+}
+)";
 
-    // Compute the color for each pixel
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            framebuffer[y * width + x] = rayTrace(x, y, width, height);
-        }
+// Function to compile a shader
+GLuint compileShader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    int success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+        std::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
     }
 
-    // Draw the framebuffer to the screen
-    glDrawPixels(width, height, GL_RGB, GL_FLOAT, framebuffer.data());
+    return shader;
+}
+
+// Function to create a shader program
+GLuint createShaderProgram(const char* vertexSource, const char* fragmentSource) {
+    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource);
+    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
+
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    int success;
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
+        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+    }
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    return shaderProgram;
+}
+
+// Function to render the scene using the shader program
+void renderScene(GLuint shaderProgram, int width, int height) {
+    glUseProgram(shaderProgram);
+
+    // Set the uniform variables
+    glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
+    glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
+
+    // Draw a full-screen quad
+    glBegin(GL_TRIANGLES);
+    glVertex2f(-1.0f, -1.0f);
+    glVertex2f(1.0f, -1.0f);
+    glVertex2f(1.0f, 1.0f);
+    glVertex2f(-1.0f, -1.0f);
+    glVertex2f(1.0f, 1.0f);
+    glVertex2f(-1.0f, 1.0f);
+    glEnd();
+
+    glUseProgram(0);
 }
 
 int main() {
@@ -53,10 +126,13 @@ int main() {
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
+    // Compile and link shaders
+    GLuint shaderProgram = createShaderProgram(vertexShaderSource, fragmentShaderSource);
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         // Render the scene
-        renderScene(width, height);
+        renderScene(shaderProgram, width, height);
 
         // Swap buffers
         glfwSwapBuffers(window);
@@ -65,7 +141,9 @@ int main() {
         glfwPollEvents();
     }
 
-    // Terminate GLFW
+    // Cleanup
+    glDeleteProgram(shaderProgram);
+    glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }
