@@ -7,8 +7,13 @@ uniform int height;
 uniform int numSpheres;
 
 #define MAX_SPHERES 5
-#define RAND_MAX 1.0f
-#define MAX_BOUNCE 5
+#define MAX_BOUNCE 6
+
+struct Material
+{
+    vec3 color;
+	float emission_strength;
+};
 
 struct HitInfo
 {
@@ -16,7 +21,7 @@ struct HitInfo
     float dst;
     vec3 point;
     vec3 normal;
-    vec3 color;
+    Material material;
 };
 
 struct Ray
@@ -25,11 +30,7 @@ struct Ray
     vec3 dir;
 };
 
-struct Material
-{
-    vec3 color;
-	float emission_strength;
-};
+
 
 struct Sphere
 {
@@ -92,37 +93,12 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
     hitInfo.dst = dst;
     hitInfo.point = ray.origin + dst * ray.dir;
     hitInfo.normal = (hitInfo.point - center) / sphere.radius;
-    hitInfo.color = sphere.material.color;
+    hitInfo.material = sphere.material;
 
     return hitInfo;
 }
 
-vec3 trace(Ray ray, vec2 co)
-{
-    for (int i = 0; i < MAX_BOUNCE; i++)
-    {
-        HitInfo closest;
-		for (int i = 0; i < numSpheres; i++)
-		{
-			HitInfo hit = hit_sphere(spheres[i].center, ray, spheres[i]);
-			if (hit.hit && hit.dst < closest.dst)
-			{
-				closest = hit;
-			}
-		}
-
-		if (!closest.hit)
-		{
-			return vec3(0, 0, 0);
-		}
-
-		ray.origin = closest.point;
-		ray.dir = randomHemisphereDir(closest.normal, co);
-	
-    }
-}
-
-vec3 frag(Ray ray, Sphere spheres[MAX_SPHERES])
+HitInfo calcRayCollision(Ray ray, Sphere[MAX_SPHERES] spheres)
 {
     HitInfo closest;
     closest.hit = false;
@@ -136,14 +112,42 @@ vec3 frag(Ray ray, Sphere spheres[MAX_SPHERES])
             closest = hit;
         }
     }
+    return closest;
+}
 
+vec3 trace(Ray ray, vec2 co)
+{
+    vec3 incomingLight = vec3(0, 0, 0);
+    vec3 color  = vec3(1, 1, 1);
+
+    for (int i = 0; i < MAX_BOUNCE; i++)
+    {
+        HitInfo hitInfo = calcRayCollision(ray, spheres);
+        if (hitInfo.hit)
+		{
+			ray.origin = hitInfo.point;
+			ray.dir = randomHemisphereDir(hitInfo.normal, co);;
+
+            Material material = hitInfo.material;
+            vec3 emission = material.emission_strength * material.color;
+            incomingLight += color * emission;
+            color *= material.color;
+		}
+		else
+		{
+            break;
+		}
+    }
+    return incomingLight;
+}
+
+vec3 frag(Ray ray, Sphere spheres[MAX_SPHERES])
+{
+    return trace(ray, texCoord);
+
+    
     vec3 unit_dir = normalize(ray.dir);
     float t = 0.5f * (unit_dir.y + 1.0f);
-    if (closest.hit)
-    {
-        return getRandomVector(vec2(t, 1-t));
-    }
-
     return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
 }
 

@@ -82,7 +82,7 @@ int main() {
     // Create a vector for the spheres
     vector<Sphere> spheres = {
         {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 1.0f, 0.0f), 0.0f},
-		{vec3(2.0f, 0.0f, -3.0f), 2.0f, vec3(0.0f, 1.0f, 1.0f), 0.0f},
+		{vec3(10.0f, -10.0f, -40.0f), 20.0f, vec3(1.0f, 1.0f, 1.0f), 1.0f},
 		{vec3(-2.0f, 0.0f, -4.0f), 1.0f, vec3(1.0f, 0.0f, 1.0f), 0.0f}
 
     };
