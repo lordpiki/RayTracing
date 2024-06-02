@@ -2,79 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <iostream>
-#include <vector>
-
-// Vertex shader source code
-const char* vertexShaderSource = R"(
-#version 330 core
-layout(location = 0) in vec2 aPos;
-out vec2 texCoord;
-void main() {
-    texCoord = (aPos + 1.0) / 2.0;
-    gl_Position = vec4(aPos, 0.0, 1.0);
-}
-)";
-
-// Fragment shader source code
-const char* fragmentShaderSource = R"(
-#version 330 core
-out vec4 FragColor;
-in vec2 texCoord;
-uniform int width;
-uniform int height;
-
-vec3 rayTrace(int x, int y, int width, int height) {
-    return vec3(float(x) / float(width), float(y) / float(height), 0.5f);
-}
-
-void main() {
-    int x = int(texCoord.x * float(width));
-    int y = int(texCoord.y * float(height));
-    vec3 color = rayTrace(x, y, width, height);
-    FragColor = vec4(color, 1.0);
-}
-)";
-
-// Function to compile a shader
-GLuint compileShader(GLenum type, const char* source) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, nullptr);
-    glCompileShader(shader);
-
-    int success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-        std::cerr << "ERROR::SHADER::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    return shader;
-}
-
-// Function to create a shader program
-GLuint createShaderProgram(const char* vertexSource, const char* fragmentSource) {
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
-
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    int success;
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    return shaderProgram;
-}
+#include "shader.h"
 
 // Function to render the scene using the shader program
 void renderScene(GLuint shaderProgram, int width, int height) {
@@ -127,7 +55,7 @@ int main() {
     glViewport(0, 0, width, height);
 
     // Compile and link shaders
-    GLuint shaderProgram = createShaderProgram(vertexShaderSource, fragmentShaderSource);
+    GLuint shaderProgram = createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
