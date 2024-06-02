@@ -23,6 +23,7 @@
     <ClCompile Include="shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Ray.h" />
     <ClInclude Include="shader.h" />
   </ItemGroup>
   <ItemGroup>
