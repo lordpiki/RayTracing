@@ -81,13 +81,13 @@ int main() {
 
     std::cout << "Sphere size: " << sizeof(Sphere) << std::endl;
 
-	Sphere sun = { vec3(40.0f, -31.0f, -54.0f), 40.0f, vec3(1.0f, 1.0f, 1.0f), 5.0f };
+	Sphere sun = { vec3(40.0f, -51.0f, -45.0f), 50.0f, vec3(0.0f, 0.0f, 1.0f), 5.0f, vec3(1.0f, 1.0f, 1.0f),  0.5f};
 
     // Create a vector for the spheres
     vector<Sphere> spheres = {
-        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 0.0f, 0.0f), 0.0f},
-		{vec3(-2.0f, 0.0f, -4.0f), 1.0f, vec3(1.0f, 1.0f, 0.0f), 0.0f},
-		{vec3(-2.0f, 11.0f, -4.0f), 10.0f, vec3(0.128f, 0.0f, 0.128f), 0.0f},
+        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 0.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
+		{vec3(-1.5f, 0.0f, -2.0f), 0.5f, vec3(1.0f, 1.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
+		{vec3(-2.0f, 10.5f, -4.0f), 10.0f, vec3(0.128f, 0.0f, 0.128f), 0.0f, vec3(0, 0, 0),  0.0f},
     };
 
 	spheres.push_back(sun);
