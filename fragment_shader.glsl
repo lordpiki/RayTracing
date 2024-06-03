@@ -7,8 +7,8 @@ uniform int height;
 uniform int numSpheres;
 
 #define MAX_SPHERES 5
-#define MAX_BOUNCE 2
-#define RAYS_PER_PIXEL 2
+#define MAX_BOUNCE 10
+#define RAYS_PER_PIXEL 5
 
 struct Material
 {
@@ -113,25 +113,22 @@ float randomValNormalDist(int state)
 vec3 getRandomVector(int state)
 {
     float x = randomValNormalDist(state);
-    float y = randomValNormalDist(state + int(54532 * getRandomVal(state)));
-    float z = randomValNormalDist(state + int(432425453 * getRandomVal(state)));
+    float y = randomValNormalDist(state * state + int(545432 * getRandState(texCoord)));
+    float z = randomValNormalDist(state * state * state + int(432425453 * getRandState(texCoord)));
     return normalize(vec3(x, y, z));
 }
 
 vec3 randomHemisphereDir(vec3 normal, int state)
 {
-    
     vec3 dir = getRandomVector(state);
     return dir * sign(dot(dir, normal));
 }
-
 
 vec3 trace(Ray ray, int state)
 {
     vec3 incomingLight = vec3(0, 0, 0);
     vec3 color  = vec3(1, 1, 1);
     
-
     for (int i = 0; i < MAX_BOUNCE; i++)
     {
         HitInfo hitInfo = calcRayCollision(ray, spheres);
@@ -139,9 +136,7 @@ vec3 trace(Ray ray, int state)
         {
 
             ray.origin = hitInfo.point;
-            ray.dir = randomHemisphereDir(hitInfo.normal, state); // Random direction in hemisphere
-            
-            //return ray.dir;
+            ray.dir = randomHemisphereDir(hitInfo.normal, state + i); // Random direction in hemisphere
             
             Material material = hitInfo.material;
             vec3 emission = material.emission_strength * material.emmision_color;
@@ -163,8 +158,8 @@ vec3 frag(Ray ray, Sphere spheres[MAX_SPHERES])
 
     for (int i = 0; i < RAYS_PER_PIXEL; i++)
     {
-        int state = int(getRandState(texCoord) * width * height + texCoord.xy * width * height);
-        totalLight += trace(ray, abs(state));
+        int state = int(getRandState(texCoord) * 100);
+        totalLight += trace(ray, state + i);
     }
 
     return totalLight / RAYS_PER_PIXEL;
@@ -201,10 +196,6 @@ void main()
     int y = int(texCoord.y * float(height));
 
     Ray ray = ray_setup(x, y);
-
-    int numPixels = width * height;
-    int pixelIndex = y * width + x;
-    int state = pixelIndex;
 
     FragColor = vec4(frag(ray, spheres), 1.0);
 }
