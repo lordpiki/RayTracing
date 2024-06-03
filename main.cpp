@@ -24,15 +24,30 @@ struct Sphere
 	Material material;
 };
 
+struct Camera
+{
+	vec3 camera_center;
+	float focal_length;
+	float viewport_height;
+};
+
 // Function to render the scene using the shader program
-void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffer, int numSpheres)
+void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffer, int numSpheres, Camera camera)
 {
     glUseProgram(shaderProgram);
 
     // Set the uniform variables
+    // pass the screen vars
     glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
     glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
+    
+    // pass the objects
     glUniform1i(glGetUniformLocation(shaderProgram, "numSpheres"), numSpheres);
+	
+    // pass the camera vars
+    glUniform1f(glGetUniformLocation(shaderProgram, "focal_length_in"), camera.focal_length);
+	glUniform1f(glGetUniformLocation(shaderProgram, "viewport_height_in"), camera.viewport_height);
+	glUniform3fv(glGetUniformLocation(shaderProgram, "camera_center_in"), 1, &camera.camera_center[0]);
 
     // Bind the sphere buffer
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, sphereBuffer);
@@ -48,6 +63,27 @@ void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffe
     glEnd();
 
     glUseProgram(0);
+}
+
+vector<Sphere> spheresSetup()
+{
+    Sphere sun = { vec3(50.0f, -101.0f, -105.0f), 100.0f, vec3(0.0f, 0.0f, 1.0f), 5.0f, vec3(1.0f, 1.0f, 1.0f),  0.5f };
+
+    // Create a vector for the spheres
+    vector<Sphere> spheres = {
+        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 0.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
+        {vec3(-1.5f, 0.0f, -2.0f), 0.5f, vec3(1.0f, 1.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
+        {vec3(-2.0f, 10.5f, -4.0f), 10.0f, vec3(0.5f, 0.0f, 0.5f), 0.0f, vec3(0, 0, 0),  0.0f},
+    };
+
+    spheres.push_back(sun);
+	return spheres;
+}
+
+Camera cameraSetup()
+{
+	Camera camera = { vec3(0.0f, 0.0f, 0.0f), 1.0f, 2.0f };
+	return camera;
 }
 
 int main() {
@@ -81,16 +117,8 @@ int main() {
 
     std::cout << "Sphere size: " << sizeof(Sphere) << std::endl;
 
-	Sphere sun = { vec3(50.0f, -101.0f, -105.0f), 100.0f, vec3(0.0f, 0.0f, 1.0f), 5.0f, vec3(1.0f, 1.0f, 1.0f),  0.5f};
-
-    // Create a vector for the spheres
-    vector<Sphere> spheres = {
-        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 0.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
-		{vec3(-1.5f, 0.0f, -2.0f), 0.5f, vec3(1.0f, 1.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
-		{vec3(-2.0f, 10.5f, -4.0f), 10.0f, vec3(0.128f, 0.0f, 0.128f), 0.0f, vec3(0, 0, 0),  0.0f},
-    };
-
-	spheres.push_back(sun);
+	vector<Sphere> spheres = spheresSetup();
+	Camera camera = cameraSetup();
 
     // Create and fill the sphere buffer
     GLuint sphereBuffer;
@@ -122,7 +150,7 @@ int main() {
         }
 
         // Render the scene
-        renderScene(shaderProgram, width, height, sphereBuffer, spheres.size());
+        renderScene(shaderProgram, width, height, sphereBuffer, spheres.size(), camera);
 
         // Swap buffers
         glfwSwapBuffers(window);

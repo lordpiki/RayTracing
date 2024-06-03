@@ -6,9 +6,14 @@ uniform int width;
 uniform int height;
 uniform int numSpheres;
 
+uniform float focal_length_in;
+uniform float viewport_height_in;
+uniform vec3 camera_center_in;
+
+
 #define MAX_SPHERES 5
-#define MAX_BOUNCE 10
-#define RAYS_PER_PIXEL 5
+#define MAX_BOUNCE 3
+#define RAYS_PER_PIXEL 2
 
 struct Material
 {
@@ -140,7 +145,7 @@ vec3 trace(Ray ray, int state)
             
             Material material = hitInfo.material;
             vec3 emission = material.emission_strength * material.emmision_color;
-            incomingLight += color * emission;
+            incomingLight += color * emission * 0.5;
             color *= material.color;
 
         }
@@ -162,15 +167,18 @@ vec3 frag(Ray ray, Sphere spheres[MAX_SPHERES])
         totalLight += trace(ray, state + i);
     }
 
+
+
     return totalLight / RAYS_PER_PIXEL;
 }
 
 Ray ray_setup(int x, int y)
 {
-    float focal_length = 1.0;
-    float viewport_height = 2.0;
+    
+    float focal_length = focal_length_in;
+    float viewport_height = viewport_height_in;
+    vec3 camera_center = camera_center_in;
     float viewport_width = viewport_height * (float(width) / height);
-    vec3 camera_center = vec3(0, 0, 0);
 
     vec3 viewport_u = vec3(viewport_width, 0, 0);
     vec3 viewport_v = vec3(0, -viewport_height, 0);
