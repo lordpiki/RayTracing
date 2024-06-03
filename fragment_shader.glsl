@@ -2,7 +2,7 @@
 out vec4 FragColor;
 in vec2 texCoord;
 
-uniform int width;
+uniform int width ;
 uniform int height;
 uniform int numSpheres;
 
@@ -11,9 +11,10 @@ uniform float viewport_height_in;
 uniform vec3 camera_center_in;
 
 
+
 #define MAX_SPHERES 5
 #define MAX_BOUNCE 3
-#define RAYS_PER_PIXEL 2
+#define RAYS_PER_PIXEL 4
 
 struct Material
 {
@@ -55,6 +56,7 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
     HitInfo hitInfo;
     hitInfo.hit = false;
     hitInfo.dst = 1000000.0f;
+
 
     vec3 oc = ray.origin - center;
     float a = dot(ray.dir, ray.dir);
