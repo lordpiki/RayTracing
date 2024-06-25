@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <tuple>
 #include "shader.h"
 #include <vector>
 
@@ -14,13 +15,17 @@
 #include <stdio.h>
 #define GL_SILENCE_DEPRECATION
 
-using std::string;
-using std::vector;
+// using glm
 using glm::vec3;
 using glm::vec4;
 
+// using std
+using std::string;
+using std::vector;
+using std::tuple;
 using std::cout;
 using std::endl;
+using std::tie;
 
 struct Sphere
 {
@@ -105,7 +110,22 @@ static GLFWwindow* glfw_setup(int width, int height)
     return window;
 }
 
-void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffer, int numSpheres)
+static void fps_counter(GLFWwindow* window, float& lastTime, int& nbFrames)
+{
+    double currentTime = glfwGetTime();
+    nbFrames++;
+
+    // If one second has passed, update the window title with the FPS
+    if (currentTime - lastTime >= 1.0) {
+        int fps = double(nbFrames) / (currentTime - lastTime);
+        std::string title = "Ray Tracing - FPS: " + std::to_string(fps);
+        glfwSetWindowTitle(window, title.c_str());
+        nbFrames = 0;
+        lastTime = currentTime;
+    }
+}
+
+static void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffer, int numSpheres)
 {
     glUseProgram(shaderProgram);
 
@@ -129,21 +149,30 @@ void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffe
 
     glUseProgram(0);
 }
-int main()
-{
 
+static tuple<int, int>set_bounding_box()
+{
     const float ratio = 16.0f / 9.0f;
     const int width = 1280;
     const int height = width / ratio;
+	return { width, height };
+}
 
-    // Initialize GLFW
-    if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
-        return -1;
-    }
+static void cleanup(GLFWwindow* window)
+{
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+int main()
+{
+	int width, height;
+	std::tie(width, height) = set_bounding_box();
 
     GLFWwindow* window = glfw_setup(width, height);
-
 
     // Setup Dear ImGui context
     imgui_setup(window);
@@ -167,7 +196,7 @@ int main()
     GLuint shaderProgram = createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
 
     // Variables for FPS calculation
-    double lastTime = glfwGetTime();
+    float lastTime = glfwGetTime();
     int nbFrames = 0;
 
     // Main loop
@@ -176,19 +205,7 @@ int main()
         // Poll for events
         glfwPollEvents();
 		imgui_start_loop();
-        // Measure the time
-        double currentTime = glfwGetTime();
-        nbFrames++;
-
-        // If one second has passed, update the window title with the FPS
-        if (currentTime - lastTime >= 1.0) {
-            int fps = double(nbFrames) / (currentTime - lastTime);
-            std::string title = "Ray Tracing - FPS: " + std::to_string(fps);
-            glfwSetWindowTitle(window, title.c_str());
-            nbFrames = 0;
-            lastTime = currentTime;
-        }
-
+		fps_counter(window, lastTime, nbFrames);
 
         // demo window
         {
@@ -213,17 +230,13 @@ int main()
             ImGui::End();
         }
 
+
         // Render the scene
         renderScene(shaderProgram, width, height, sphereBuffer, spheres.size());
-
-
-        // Rendering
 		imgui_end_loop(window);
     }
 
     // Cleanup
-    glDeleteProgram(shaderProgram);
-    glfwDestroyWindow(window);
-    glfwTerminate();
+	cleanup(window);
     return 0;
 }
