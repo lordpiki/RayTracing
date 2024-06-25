@@ -13,8 +13,8 @@ uniform vec3 camera_center_in;
 
 
 #define MAX_SPHERES 5
-#define MAX_BOUNCE 3
-#define RAYS_PER_PIXEL 4
+#define MAX_BOUNCE 50
+#define RAYS_PER_PIXEL 2
 
 struct Material
 {

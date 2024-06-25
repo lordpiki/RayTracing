@@ -1,230 +1,135 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
-#include "shader.h"
-#include <vector>
+// Dear ImGui: standalone example application for GLFW + OpenGL 3, using programmable pipeline
+// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 
+// Learn about Dear ImGui:
+// - FAQ                  https://dearimgui.com/faq
+// - Getting Started      https://dearimgui.com/getting-started
+// - Documentation        https://dearimgui.com/docs (same as your local docs/ folder).
+// - Introduction, links and more at the top of imgui.cpp
 
-using std::vector;
-using glm::vec3;
-using glm::vec4;
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <stdio.h>
+#define GL_SILENCE_DEPRECATION
 
-struct Material
+#include <GLFW/glfw3.h> // Will drag system OpenGL headers
+
+static void glfw_error_callback(int error, const char* description)
 {
-    vec3 color;
-    float emission_strength;
-    vec3 emmision_color;
-    float reflection_strength;
-};
-
-struct Sphere
-{
-    vec3 center;
-    float radius;
-    Material material;
-};
-
-struct Camera
-{
-    vec3 camera_center;
-    float focal_length;
-    float viewport_height;
-};
-
-
-// Callback function for handling scroll events
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    // Update camera focal length based on scroll direction
-    Camera* camera = static_cast<Camera*>(glfwGetWindowUserPointer(window));
-	camera->focal_length += yoffset * 0.1f;
+    fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-// Callback function for handling cursor position events
-void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+// Main code
+int main(int, char**)
 {
-    Camera* camera = static_cast<Camera*>(glfwGetWindowUserPointer(window));
-    // Update camera position based on cursor movement
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-    {
-        static double lastX = xpos, lastY = ypos;
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit())
+        return 1;
 
-        double deltaX = - ( xpos - lastX );
-        double deltaY = ypos - lastY;
-
-        // Adjust camera_center based on cursor movement
-        camera->camera_center += vec3(deltaX * 0.01f, -deltaY * 0.01f, 0.0f);
-
-        lastX = xpos;
-        lastY = ypos;
-    }
-
-    // Update camera position based on cursor movement
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
-    {
-        static double lastX = xpos, lastY = ypos;
-        Camera* camera = static_cast<Camera*>(glfwGetWindowUserPointer(window));
-
-        double deltaX = - ( xpos - lastX );
-        double deltaY = ypos - lastY;
-
-        // Rotate camera_center based on cursor movement
-        float rotationSpeed = 0.01f;
-        float angleX = deltaX * rotationSpeed;
-        float angleY = deltaY * rotationSpeed;
-
-        glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), angleX, glm::vec3(0.0f, 1.0f, 0.0f));
-        rotationMatrix = glm::rotate(rotationMatrix, angleY, glm::vec3(1.0f, 0.0f, 0.0f));
-
-        glm::vec4 newCameraCenter = rotationMatrix * glm::vec4(camera->camera_center, 1.0f);
-        camera->camera_center = glm::vec3(newCameraCenter);
-
-        lastX = xpos;
-        lastY = ypos;
-    }
-}
-
-// Function to render the scene using the shader program
-void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffer, int numSpheres, Camera camera)
-{
-    glUseProgram(shaderProgram);
-
-    // Set the uniform variables
-    // pass the screen vars
-    glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
-    glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
-
-    // pass the objects
-    glUniform1i(glGetUniformLocation(shaderProgram, "numSpheres"), numSpheres);
-
-    // pass the camera vars
-    glUniform1f(glGetUniformLocation(shaderProgram, "focal_length_in"), camera.focal_length);
-    glUniform1f(glGetUniformLocation(shaderProgram, "viewport_height_in"), camera.viewport_height);
-    glUniform3fv(glGetUniformLocation(shaderProgram, "camera_center_in"), 1, &camera.camera_center[0]);
-
-    // Bind the sphere buffer
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, sphereBuffer);
-
-    // Draw a full-screen quad
-    glBegin(GL_TRIANGLES);
-    glVertex2f(-1.0f, -1.0f);
-    glVertex2f(1.0f, -1.0f);
-    glVertex2f(1.0f, 1.0f);
-    glVertex2f(-1.0f, -1.0f);
-    glVertex2f(1.0f, 1.0f);
-    glVertex2f(-1.0f, 1.0f);
-    glEnd();
-
-    glUseProgram(0);
-}
-
-vector<Sphere> spheresSetup()
-{
-    Sphere sun = { vec3(50.0f, -101.0f, -105.0f), 100.0f, vec3(0.0f, 0.0f, 1.0f), 5.0f, vec3(1.0f, 1.0f, 1.0f),  0.5f };
-
-    // Create a vector for the spheres
-    vector<Sphere> spheres = {
-        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 0.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
-        {vec3(-1.5f, 0.0f, -2.0f), 0.5f, vec3(1.0f, 1.0f, 0.0f), 0.0f, vec3(0, 0, 0),  0.0f},
-        {vec3(-2.0f, 10.5f, -4.0f), 10.0f, vec3(0.5f, 0.0f, 0.5f), 0.0f, vec3(0, 0, 0),  0.0f},
-    };
-
-    spheres.push_back(sun);
-    return spheres;
-}
-
-
-Camera cameraSetup()
-{
-    Camera camera = { vec3(0.0f, 0.0f, 0.0f), 1.0f, 2.0f };
-    return camera;
-}
+    // GL 3.0 + GLSL 130
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
 
 
-int main() {
-    // Initialize GLFW
-    if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
-        return -1;
-    }
-
-    // Create a GLFW window
-    GLFWwindow* window = glfwCreateWindow(1200, 900, "Ray Tracing - FPS: ", NULL, NULL);
-    if (!window) {
-        std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-
-    // Make the OpenGL context current
+    // Create window with graphics context
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    if (window == nullptr)
+        return 1;
     glfwMakeContextCurrent(window);
+    //glfwSwapInterval(1); // Enable vsync
 
-    // Initialize GLEW
-    if (glewInit() != GLEW_OK) {
-        std::cerr << "Failed to initialize GLEW" << std::endl;
-        return -1;
-    }
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    // Set the viewport
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    glViewport(0, 0, width, height);
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
 
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __EMSCRIPTEN__
+    ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
+#endif
+    ImGui_ImplOpenGL3_Init(glsl_version);
 
-    vector<Sphere> spheres = spheresSetup();
-    Camera camera = cameraSetup();
+    // Our state
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    glfwSetWindowUserPointer(window, &camera);
+    while (!glfwWindowShouldClose(window))
 
-    // Set up callback functions
-    glfwSetScrollCallback(window, scroll_callback);
-    glfwSetCursorPosCallback(window, cursor_position_callback);
+    {
+        glfwPollEvents();
 
-    // Create and fill the sphere buffer
-    GLuint sphereBuffer;
-    glGenBuffers(1, &sphereBuffer);
-    glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
-    glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
-    // Compile and link shaders
-    GLuint shaderProgram = createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
 
-    // Variables for FPS calculation
-    double lastTime = glfwGetTime();
-    int nbFrames = 0;
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+        {
+            static float f = 0.0f;
+            static int counter = 0;
 
-    // Main loop
-    while (!glfwWindowShouldClose(window)) {
-        // Measure the time
-        double currentTime = glfwGetTime();
-        nbFrames++;
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
-        // If one second has passed, update the window title with the FPS
-        if (currentTime - lastTime >= 1.0) {
-            int fps = double(nbFrames) / (currentTime - lastTime);
-            std::string title = "Ray Tracing - FPS: " + std::to_string(fps);
-            glfwSetWindowTitle(window, title.c_str());
-            nbFrames = 0;
-            lastTime = currentTime;
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::End();
         }
 
-        // Render the scene
-        renderScene(shaderProgram, width, height, sphereBuffer, spheres.size(), camera);
+        // 3. Show another simple window.
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
+            ImGui::End();
+        }
 
-        // Swap buffers
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
-
-        // Poll for events
-        glfwPollEvents();
     }
 
     // Cleanup
-    glDeleteProgram(shaderProgram);
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     glfwDestroyWindow(window);
     glfwTerminate();
+
     return 0;
 }
