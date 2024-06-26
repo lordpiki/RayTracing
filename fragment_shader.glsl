@@ -2,10 +2,18 @@
 out vec4 FragColor;
 in vec2 texCoord;
 
+// screen
 uniform int width;
 uniform int height;
-uniform int numSpheres;
 
+// camera 
+uniform vec3 center;
+uniform vec3 pixel00_loc;
+uniform vec3 pixel_delta_u;
+uniform vec3 pixel_delta_v;
+
+// else
+uniform int numSpheres;
 #define MAX_SPHERES 5
 
 struct HitInfo
@@ -64,60 +72,48 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
 
 vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
 {
-    HitInfo closest;
-    closest.hit = false;
-    closest.dst = 1000000.0f;
-
+	
+    HitInfo hitInfo;
+    hitInfo.hit = false;
+    hitInfo.dst = 9e9;
     for (int i = 0; i < numSpheres; i++)
-    {
-        HitInfo hit = hit_sphere(spheres[i].center, ray, spheres[i]);
-        if (hit.hit && hit.dst < closest.dst)
-        {
-            closest = hit;
-        }
-    }
+	{
+		Sphere sphere = spheres[i];
+		HitInfo hit = hit_sphere(sphere.center, ray, sphere);
+		if (hit.hit && hit.dst < hitInfo.dst)
+		{
+			hitInfo = hit;
+		}
+	}
+    if (hitInfo.hit)
+	{
+		return hitInfo.normal;
+	}
 
-    if (closest.hit)
-    {
-        return closest.normal;
-    }
-
+    if (dot(ray.dir, vec3(0, 1, 0)) > 0.0f)
+	{
+		return vec3(0.5, 0.7, 1.0);
+	}
     vec3 unit_dir = normalize(ray.dir);
     float t = 0.5f * (unit_dir.y + 1.0f);
     return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
 }
 
-Ray ray_setup(int x, int y)
+Ray createRay(int x, int y)
 {
-    float focal_length = 1.0;
-    float viewport_height = 2.0;
-    float viewport_width = viewport_height * (float(width) / height);
-    vec3 camera_center = vec3(0, 0, 0);
-
-    vec3 viewport_u = vec3(viewport_width, 0, 0);
-    vec3 viewport_v = vec3(0, -viewport_height, 0);
-
-    vec3 pixel_delta_u = viewport_u / float(width);
-    vec3 pixel_delta_v = viewport_v / float(height);
-
-    vec3 viewport_upper_left = camera_center - vec3(0, 0, focal_length) - viewport_u / 2.0f - viewport_v / 2.0f;
-    vec3 pixel00_loc = viewport_upper_left + 0.5f * (pixel_delta_u + pixel_delta_v);
-
     vec3 pixel_center = pixel00_loc + (x * pixel_delta_u) + (y * pixel_delta_v);
-    vec3 ray_direction = pixel_center - camera_center;
-
-    Ray ray;
-    ray.origin = camera_center;
-    ray.dir = ray_direction;
-    return ray;
+    vec3 ray_direction = pixel_center - center;
+    Ray r = Ray(center, ray_direction);
+    return r;
 }
+
 
 void main()
 {
     int x = int(texCoord.x * float(width));
     int y = int(texCoord.y * float(height));
 
-    Ray ray = ray_setup(x, y);
+    Ray ray = createRay(x, y);
 
     FragColor = vec4(rayTrace(ray, spheres), 1.0);
 }

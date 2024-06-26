@@ -15,6 +15,9 @@
 #include <stdio.h>
 #define GL_SILENCE_DEPRECATION
 
+// custom includes
+#include "camera.h"
+
 // using glm
 using glm::vec3;
 using glm::vec4;
@@ -125,7 +128,7 @@ static void fps_counter(GLFWwindow* window, float& lastTime, int& nbFrames)
     }
 }
 
-static void renderScene(GLuint shaderProgram, int width, int height, GLuint sphereBuffer, int numSpheres)
+static void renderScene(GLuint shaderProgram, int width, int height, Camera camera, GLuint sphereBuffer, int numSpheres)
 {
     glUseProgram(shaderProgram);
 
@@ -133,6 +136,14 @@ static void renderScene(GLuint shaderProgram, int width, int height, GLuint sphe
     glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
     glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
     glUniform1i(glGetUniformLocation(shaderProgram, "numSpheres"), numSpheres);
+
+	// Set the camera uniform variables
+	glUniform3fv(glGetUniformLocation(shaderProgram, "center"), 1, &camera.center[0]);
+	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel00_loc"), 1, &camera.pixel00_loc[0]);
+	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_u"), 1, &camera.pixel_delta_u[0]);
+	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_v"), 1, &camera.pixel_delta_v[0]);
+
+
 
     // Bind the sphere buffer
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, sphereBuffer);
@@ -167,6 +178,14 @@ static void cleanup(GLFWwindow* window)
     glfwTerminate();
 }
 
+static Camera createCamera(int width, int height)
+{
+	// Create a camera
+	Camera camera;
+	camera.init(width, height);
+	return camera;
+}
+
 int main()
 {
 	int width, height;
@@ -177,6 +196,9 @@ int main()
     // Setup Dear ImGui context
     imgui_setup(window);
 
+	// Setup camera
+	Camera camera = createCamera(width, height);
+
     // Create a vector for the spheres
     vector<Sphere> spheres = {
         {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 1.0f, 0.0f), 0.0f},
@@ -185,12 +207,7 @@ int main()
 
     };
 
-    // Create and fill the sphere buffer
-    GLuint sphereBuffer;
-    glGenBuffers(1, &sphereBuffer);
-    glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
-    glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
 
     // Compile and link shaders
     GLuint shaderProgram = createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
@@ -212,27 +229,74 @@ int main()
             static float f = 0.0f;
             static int counter = 0;
 
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+            ImGui::Begin("Hello, world!");
 
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            //ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Text("Sphere[0]");
+
             //ImGui::Checkbox("Another Window", &show_another_window);
 
-            //ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::SliderFloat("sphere[0].x", &spheres[0].center.x, -5.0f, 5.0f);           
+            ImGui::SliderFloat("sphere[0].y", &spheres[0].center.y, -5.0f, 5.0f);
+            ImGui::SliderFloat("sphere[0].z", &spheres[0].center.z, -5.0f, 5.0f);
+
+            if (ImGui::Button("reset pos"))
+                camera.center = vec3(0.0f, 0.0f, 0.0f);
+            if (ImGui::Button("reset lookAt"))
+				camera.lookat = vec3(0.0f, 0.0f, 0.0f);
+			// check if up key is pressed
+            
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow), true))
+				camera.center.z -= 0.1f;
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow), true))
+				camera.center.z += 0.1f;
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftArrow), true))
+				camera.center.x -= 0.1f;
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow), true))
+				camera.center.x += 0.1f;
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Space), true))
+				camera.center.y -= 0.1f;
+			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftShift), true))
+				camera.center.y += 0.1f;
+            
+
+
+
+
+            ImGui::Text("Camera Pos");
+
+            ImGui::SliderFloat("Camera.pos.x", &camera.center.x, -5.0f, 5.0f);
+			ImGui::SliderFloat("Camera.pos.y", &camera.center.y, 5.0f, -5.0f);
+			ImGui::SliderFloat("Camera.pos.z", &camera.center.z, 5.0f, -5.0f);
+
+			ImGui::Text("Camera LookAt");
+
+			ImGui::SliderFloat("Camera.lookAt.x", &camera.lookat.x, -5.0f, 5.0f);
+			ImGui::SliderFloat("Camera.lookAt.y", &camera.lookat.y, 5.0f, -5.0f);
+			ImGui::SliderFloat("Camera.lookAt.z", &camera.lookat.z, -5.0f, 5.0f);
+
+			camera.update_view();
+            //ImGui::SliderFloat("CameraPos.x", )
+            
             //ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
             //if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
             //    counter++;
             //ImGui::SameLine();
-            //ImGui::Text("counter = %d", counter);
+            //ImGui::Text("sphere[0].x: %f", spheres[0].center.x);
 
             //ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             ImGui::End();
         }
 
+        // Create and fill the sphere buffer
+        GLuint sphereBuffer;
+        glGenBuffers(1, &sphereBuffer);
+        glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
+        glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         // Render the scene
-        renderScene(shaderProgram, width, height, sphereBuffer, spheres.size());
+        renderScene(shaderProgram, width, height, camera, sphereBuffer, spheres.size());
 		imgui_end_loop(window);
     }
 
