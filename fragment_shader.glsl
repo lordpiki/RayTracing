@@ -14,7 +14,20 @@ uniform vec3 pixel_delta_v;
 
 // else
 uniform int numSpheres;
+uniform int maxDepth;
+uniform int raysPerPixel;
 #define MAX_SPHERES 5
+
+
+int random_num = 0;
+
+
+struct Material
+{
+	vec4 color;
+    vec3 emission;
+    float emissionStrength;
+};
 
 struct HitInfo
 {
@@ -22,7 +35,7 @@ struct HitInfo
     float dst;
     vec3 point;
     vec3 normal;
-    vec3 color;
+    Material material;
 };
 
 struct Ray
@@ -35,16 +48,19 @@ struct Sphere
 {
     vec3 center;
     float radius;
-    vec3 color;
-    float pad; // padding to align with std140 layout
+    Material material;
 };
 
 layout(std140) uniform SphereBlock {
     Sphere spheres[MAX_SPHERES]; // Max num of spheres
 };
 
+
+
+
 HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
 {
+
     vec3 oc = center - ray.origin;
     float a = dot(ray.dir, ray.dir);
     float b = -2.0f * dot(ray.dir, oc);
@@ -53,6 +69,7 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
 
     HitInfo hitInfo;
     hitInfo.hit = false;
+    hitInfo.dst = 9e9;
 
     if (discriminant < 0)
     {
@@ -61,22 +78,78 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
     
     float dst = (-b - sqrt(discriminant)) / (2.0f * a);
 
+    // Check if the sphere is behind or in front of the ray
+    if (dst < 0)
+    {
+        return hitInfo;
+    }
+
     hitInfo.hit = true;
     hitInfo.dst = dst;
     hitInfo.point = ray.origin + dst * ray.dir;
     hitInfo.normal = (hitInfo.point - center) / sphere.radius;
-    hitInfo.color = sphere.color;
+    hitInfo.material = sphere.material;
 
     return hitInfo;
 }
 
-vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
+vec3 getBackground(Ray ray)
 {
-	
-    HitInfo hitInfo;
-    hitInfo.hit = false;
-    hitInfo.dst = 9e9;
-    for (int i = 0; i < numSpheres; i++)
+    return vec3(0);
+    vec3 unit_dir = normalize(ray.dir);
+    float t = 0.5f * (unit_dir.y + 1.0f);
+    return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
+}
+
+float rand(vec2 co)
+{
+    co.x += random_num;
+    random_num++;
+    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float rand_in_range(float min, float max)
+{
+	return min + (max - min) * rand(texCoord);
+}
+
+vec3 random_vec3()
+{
+	return vec3(rand(texCoord), rand(texCoord), rand(texCoord));
+}
+
+vec3 random_in_unit_sphere()
+{
+    while (true) {
+        vec3 p = random_vec3();
+        float len = length(p);
+        if (len * len < 1)
+            return p;
+    }
+}
+
+vec3 random_unit_vector()
+{
+    return normalize(random_in_unit_sphere());
+}
+
+vec3 random_on_hemisphere(const vec3 normal)
+{
+    vec3 on_unit_sphere = vec3(rand(texCoord), rand(texCoord), rand(texCoord));
+    if (dot(on_unit_sphere, normal) > 0.0)
+	{
+		return on_unit_sphere;
+	}
+	return -on_unit_sphere;
+}
+
+HitInfo calculateRayCollision(Ray ray, Sphere spheres[MAX_SPHERES])
+{
+	HitInfo hitInfo;
+	hitInfo.hit = false;
+	hitInfo.dst = 9e9;
+
+	for (int i = 0; i < numSpheres; i++)
 	{
 		Sphere sphere = spheres[i];
 		HitInfo hit = hit_sphere(sphere.center, ray, sphere);
@@ -85,18 +158,45 @@ vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
 			hitInfo = hit;
 		}
 	}
-    if (hitInfo.hit)
+
+	return hitInfo;
+}
+
+vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
+{
+    vec3 incomingLight = vec3(0);
+    vec3 rayColor = vec3(1);
+
+    for (int i = 0; i < maxDepth; i++)
 	{
-		return hitInfo.normal;
+		HitInfo hitInfo = calculateRayCollision(ray, spheres);
+
+		if (hitInfo.hit)
+		{
+			ray.origin = hitInfo.point;
+            ray.dir = random_on_hemisphere(hitInfo.normal);
+
+            Material material = hitInfo.material;
+            vec3 emittedLight = material.emissionStrength * material.emission;
+            incomingLight += emittedLight * rayColor.xyz;
+            rayColor *= material.color.xyz;
+		}
+		else
+		{
+//            if (i == 0)
+//			{
+//				return getBackground(ray);
+//			}
+//            vec3 emittedLight = vec3(1, 1, 1);
+//            incomingLight += emittedLight * rayColor;
+			break;
+		}
 	}
 
-    if (dot(ray.dir, vec3(0, 1, 0)) > 0.0f)
-	{
-		return vec3(0.5, 0.7, 1.0);
-	}
-    vec3 unit_dir = normalize(ray.dir);
-    float t = 0.5f * (unit_dir.y + 1.0f);
-    return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
+    if (incomingLight .x > 0 || incomingLight.y > 0 || incomingLight.z > 0)
+		return incomingLight;
+
+    return getBackground(ray);
 }
 
 Ray createRay(int x, int y)

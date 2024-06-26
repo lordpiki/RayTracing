@@ -30,12 +30,18 @@ using std::cout;
 using std::endl;
 using std::tie;
 
+struct Material
+{
+    vec4 color;
+    vec3 emission;
+    float emissionStrength;
+};
+
 struct Sphere
 {
     vec3 center;
     float radius;
-    vec3 color;
-    float pad; // padding to align with GLSL struct
+    Material material;
 };
 
 static void imgui_end_loop(GLFWwindow* window)
@@ -106,29 +112,33 @@ static GLFWwindow* glfw_setup(int width, int height)
         return NULL;
     }
 
-    glfwSwapInterval(1); // Enable vsync
+    //glfwSwapInterval(1); // Enable vsync
     glfwSetErrorCallback(glfw_error_callback);
     glViewport(0, 0, width, height);
 
     return window;
 }
 
-static void fps_counter(GLFWwindow* window, float& lastTime, int& nbFrames)
+static int fps_counter(GLFWwindow* window, float& lastTime, int& nbFrames)
 {
     double currentTime = glfwGetTime();
     nbFrames++;
 
     // If one second has passed, update the window title with the FPS
-    if (currentTime - lastTime >= 1.0) {
+    if (currentTime - lastTime >= 1.0)
+    //if (1)
+    {
         int fps = double(nbFrames) / (currentTime - lastTime);
         std::string title = "Ray Tracing - FPS: " + std::to_string(fps);
         glfwSetWindowTitle(window, title.c_str());
         nbFrames = 0;
         lastTime = currentTime;
+        return fps;
     }
+    return double(nbFrames) / (currentTime - lastTime);
 }
 
-static void renderScene(GLuint shaderProgram, int width, int height, Camera camera, GLuint sphereBuffer, int numSpheres)
+static void renderScene(GLuint shaderProgram, int width, int height, Camera camera, GLuint sphereBuffer, int numSpheres, int maxDepth, int raysPerPixel)
 {
     glUseProgram(shaderProgram);
 
@@ -136,6 +146,8 @@ static void renderScene(GLuint shaderProgram, int width, int height, Camera came
     glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
     glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
     glUniform1i(glGetUniformLocation(shaderProgram, "numSpheres"), numSpheres);
+    glUniform1i(glGetUniformLocation(shaderProgram, "maxDepth"), maxDepth);
+    glUniform1i(glGetUniformLocation(shaderProgram, "raysPerPixel"), raysPerPixel);
 
 	// Set the camera uniform variables
 	glUniform3fv(glGetUniformLocation(shaderProgram, "center"), 1, &camera.center[0]);
@@ -186,6 +198,84 @@ static Camera createCamera(int width, int height)
 	return camera;
 }
 
+static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, double& lastX, double& lastY)
+{
+    if (ImGui::Button("Reset camera pos"))
+        camera.center = vec3(0.0f, 0.0f, 0.0f);
+
+    vec3 center_movement = vec3(0.0f, 0.0f, 0.0f);
+
+    glm::vec3 direction = camera.lookat - camera.center;
+
+    // Calculate the angles in each axis
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        center_movement.z -= 0.1f;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        center_movement.z += 0.1f;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        center_movement.x -= 0.1f;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        center_movement.x += 0.1f;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        center_movement.y -= 0.1f;
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        center_movement.y += 0.1f;
+
+    camera.center += (center_movement / float(fps)) * 20.0f;
+
+    // check if user is dragging the mouse
+    if (ImGui::IsMouseDragging(1, 0.0f))
+    {
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        double dx = xpos - lastX;
+        double dy = ypos - lastY;
+        lastX = xpos;
+        lastY = ypos;
+
+        camera.dir.x += dx * 0.01f;
+        camera.dir.y += dy * 0.01f;
+    }
+    else
+    {
+		glfwGetCursorPos(window, &lastX, &lastY);
+	}
+
+    camera.update_view();
+}
+
+static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
+{
+    ImGui::Begin("Spheres");
+
+    if (ImGui::Button("Add Sphere"))
+    {
+        Sphere newSphere;
+        newSphere.center = vec3(0.0f);
+        newSphere.radius = 1.0f;
+        newSphere.material = { vec4(1), vec3(0), 0 };
+        spheres.push_back(newSphere);
+    }
+
+    for (int i = 0; i < spheres.size(); i++)
+    {
+        ImGui::Text("Sphere %d", i);
+        ImGui::SliderFloat3(("Center##" + std::to_string(i)).c_str(), &spheres[i].center[0], -20.0f, 20.0f);
+        ImGui::SliderFloat(("Radius##" + std::to_string(i)).c_str(), &spheres[i].radius, 0.1f, 20.0f);
+        ImGui::ColorEdit3(("Color##" + std::to_string(i)).c_str(), &spheres[i].material.color[0]);
+        ImGui::ColorEdit3(("Emission##" + std::to_string(i)).c_str(), &spheres[i].material.emission[0]);
+        ImGui::SliderFloat(("Emission Strength##" + std::to_string(i)).c_str(), &spheres[i].material.emissionStrength, 0.0f, 1.0f);
+
+        if (ImGui::Button(("Remove##" + std::to_string(i)).c_str()))
+        {
+            spheres.erase(spheres.begin() + i);
+            i--;
+        }
+    }
+    ImGui::End();
+}
+
 int main()
 {
 	int width, height;
@@ -199,14 +289,14 @@ int main()
 	// Setup camera
 	Camera camera = createCamera(width, height);
 
-    // Create a vector for the spheres
     vector<Sphere> spheres = {
-        {vec3(0.0f, 0.0f, -3.0f), 1.0f, vec3(1.0f, 1.0f, 0.0f), 0.0f},
-        {vec3(2.0f, 0.0f, -3.0f), 2.0f, vec3(0.0f, 1.0f, 1.0f), 0.0f},
-        {vec3(-2.0f, 0.0f, -4.0f), 1.0f, vec3(1.0f, 0.0f, 1.0f), 0.0f}
+        {vec3(0.0f, 0.0f, -3.0f), 1.0f, {vec4(0.5, 1, 1, 1), vec3(0), 0}},
+        {vec3(2.0f, 0.0f, -3.0f), 2.0f, {vec4(0.5, 0, 0.7, 1), vec3(1), 1}},
+        {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
 
     };
 
+    //glfwSetCursorPosCallback(window, cursor_position_callback);
 
 
     // Compile and link shaders
@@ -215,76 +305,32 @@ int main()
     // Variables for FPS calculation
     float lastTime = glfwGetTime();
     int nbFrames = 0;
+    double lastX = 0, lastY = 0;
 
+    bool showSphereEditBool = false;
+    
+    int maxDepth = 1;
+    int raysPerPixel = 1;
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
         // Poll for events
         glfwPollEvents();
 		imgui_start_loop();
-		fps_counter(window, lastTime, nbFrames);
+		int fps = fps_counter(window, lastTime, nbFrames);
 
-        // demo window
         {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");
-
-            ImGui::Text("Sphere[0]");
-
-            //ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("sphere[0].x", &spheres[0].center.x, -5.0f, 5.0f);           
-            ImGui::SliderFloat("sphere[0].y", &spheres[0].center.y, -5.0f, 5.0f);
-            ImGui::SliderFloat("sphere[0].z", &spheres[0].center.z, -5.0f, 5.0f);
-
-            if (ImGui::Button("reset pos"))
-                camera.center = vec3(0.0f, 0.0f, 0.0f);
-            if (ImGui::Button("reset lookAt"))
-				camera.lookat = vec3(0.0f, 0.0f, 0.0f);
-			// check if up key is pressed
+            ImGui::Begin("Tracer Edit");
+            handleKeyboardAndMouse(window, camera, fps, lastX, lastY);
             
-			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_UpArrow), true))
-				camera.center.z -= 0.1f;
-			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_DownArrow), true))
-				camera.center.z += 0.1f;
-			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftArrow), true))
-				camera.center.x -= 0.1f;
-			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_RightArrow), true))
-				camera.center.x += 0.1f;
-			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Space), true))
-				camera.center.y -= 0.1f;
-			if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_LeftShift), true))
-				camera.center.y += 0.1f;
+            ImGui::Checkbox("Show spheres window", &showSphereEditBool);
+            if (showSphereEditBool)
+                showSphereEdit(showSphereEditBool, spheres);
             
+            ImGui::SliderInt("Max Depth", &maxDepth, 1, 30);
+            ImGui::SliderInt("Rays Per Pixel", &raysPerPixel, 1, 100);
 
 
-
-
-            ImGui::Text("Camera Pos");
-
-            ImGui::SliderFloat("Camera.pos.x", &camera.center.x, -5.0f, 5.0f);
-			ImGui::SliderFloat("Camera.pos.y", &camera.center.y, 5.0f, -5.0f);
-			ImGui::SliderFloat("Camera.pos.z", &camera.center.z, 5.0f, -5.0f);
-
-			ImGui::Text("Camera LookAt");
-
-			ImGui::SliderFloat("Camera.lookAt.x", &camera.lookat.x, -5.0f, 5.0f);
-			ImGui::SliderFloat("Camera.lookAt.y", &camera.lookat.y, 5.0f, -5.0f);
-			ImGui::SliderFloat("Camera.lookAt.z", &camera.lookat.z, -5.0f, 5.0f);
-
-			camera.update_view();
-            //ImGui::SliderFloat("CameraPos.x", )
-            
-            //ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            //if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            //    counter++;
-            //ImGui::SameLine();
-            //ImGui::Text("sphere[0].x: %f", spheres[0].center.x);
-
-            //ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             ImGui::End();
         }
 
@@ -296,7 +342,7 @@ int main()
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         // Render the scene
-        renderScene(shaderProgram, width, height, camera, sphereBuffer, spheres.size());
+        renderScene(shaderProgram, width, height, camera, sphereBuffer, spheres.size(), maxDepth, raysPerPixel);
 		imgui_end_loop(window);
     }
 
