@@ -5,6 +5,9 @@ in vec2 texCoord;
 // screen
 uniform int width;
 uniform int height;
+uniform int frameCount;
+uniform sampler2D accumTexture;
+
 
 // camera 
 uniform vec3 center;
@@ -95,7 +98,6 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
 
 vec3 getBackground(Ray ray)
 {
-    return vec3(0);
     vec3 unit_dir = normalize(ray.dir);
     float t = 0.5f * (unit_dir.y + 1.0f);
     return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
@@ -103,13 +105,14 @@ vec3 getBackground(Ray ray)
 
 float rand(vec2 co)
 {
-    co.x += random_num;
+    co.x += random_num + frameCount * random_num;
     random_num++;
     return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 float rand_in_range(float min, float max)
 {
+    texCoord.x == texCoord.x ;
 	return min + (max - min) * rand(texCoord);
 }
 
@@ -183,12 +186,12 @@ vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
 		}
 		else
 		{
-//            if (i == 0)
-//			{
-//				return getBackground(ray);
-//			}
-//            vec3 emittedLight = vec3(1, 1, 1);
-//            incomingLight += emittedLight * rayColor;
+            if (i == 0)
+			{
+				return getBackground(ray);
+			}
+            vec3 emittedLight = vec3(1, 1, 1);
+            incomingLight += emittedLight * rayColor;
 			break;
 		}
 	}
@@ -215,5 +218,14 @@ void main()
 
     Ray ray = createRay(x, y);
 
-    FragColor = vec4(rayTrace(ray, spheres), 1.0);
+    vec3 totalIncomingLight = vec3(0);
+    for (int i = 0; i < raysPerPixel; i++)
+    {
+        totalIncomingLight += rayTrace(ray, spheres);
+    }
+    totalIncomingLight /= float(raysPerPixel);
+
+    FragColor = vec4(totalIncomingLight, 1.0);  // Normal accumulated output
+
+
 }
