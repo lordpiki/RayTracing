@@ -1,32 +1,22 @@
-#version 330 core
-out vec4 FragColor;
-in vec2 texCoord;
+#version 430 core
+layout (local_size_x = 16, local_size_y = 16) in;
+layout (rgba32f, binding = 0) uniform image2D imgOutput;
 
-// screen
-uniform int width;
-uniform int height;
-
-// camera 
-uniform vec3 center;
-uniform vec3 pixel00_loc;
-uniform vec3 pixel_delta_u;
-uniform vec3 pixel_delta_v;
-
-// else
-uniform int numSpheres;
-uniform int maxDepth;
-uniform int raysPerPixel;
-#define MAX_SPHERES 5
-
-
-int random_num = 0;
-
-
-struct Material
-{
-	vec4 color;
+struct Material {
+    vec4 color;
     vec3 emission;
     float emissionStrength;
+};
+
+struct Sphere {
+    vec3 center;
+    float radius;
+    Material material;
+};
+
+struct Ray {
+	vec3 origin;
+	vec3 dir;
 };
 
 struct HitInfo
@@ -38,24 +28,25 @@ struct HitInfo
     Material material;
 };
 
-struct Ray
-{
-    vec3 origin;
-    vec3 dir;
+layout(std430, binding = 0) buffer SphereBuffer {
+    Sphere spheres[];
 };
 
-struct Sphere
-{
-    vec3 center;
-    float radius;
-    Material material;
-};
+// camera 
+uniform vec3 center;
+uniform vec3 pixel00_loc;
+uniform vec3 pixel_delta_u;
+uniform vec3 pixel_delta_v;
 
-layout(std140) uniform SphereBlock {
-    Sphere spheres[MAX_SPHERES]; // Max num of spheres
-};
+// else
+uniform int maxDepth;
+uniform int raysPerPixel;
 
+ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
 
+int seed = 1;
+
+#define PI 3.14159265359
 
 
 HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
@@ -101,21 +92,21 @@ vec3 getBackground(Ray ray)
     return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
 }
 
-float rand(vec2 co)
-{
-    co.x += random_num;
-    random_num++;
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
+float rand() {
+    vec2 co = pixelCoords;
+    co.x += seed * (seed - 1) * 0.5;
+    co.y += seed * (seed + 1) * 1.5;
+    seed++;
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
-
 float rand_in_range(float min, float max)
 {
-	return min + (max - min) * rand(texCoord);
+	return min + (max - min) * rand();
 }
 
 vec3 random_vec3()
 {
-	return vec3(rand(texCoord), rand(texCoord), rand(texCoord));
+	return vec3(rand(), rand(), rand());
 }
 
 vec3 random_in_unit_sphere()
@@ -135,7 +126,7 @@ vec3 random_unit_vector()
 
 vec3 random_on_hemisphere(const vec3 normal)
 {
-    vec3 on_unit_sphere = vec3(rand(texCoord), rand(texCoord), rand(texCoord));
+    vec3 on_unit_sphere = vec3(rand(), rand(), rand());
     if (dot(on_unit_sphere, normal) > 0.0)
 	{
 		return on_unit_sphere;
@@ -143,13 +134,15 @@ vec3 random_on_hemisphere(const vec3 normal)
 	return -on_unit_sphere;
 }
 
-HitInfo calculateRayCollision(Ray ray, Sphere spheres[MAX_SPHERES])
+
+
+HitInfo calculateRayCollision(Ray ray)
 {
 	HitInfo hitInfo;
 	hitInfo.hit = false;
 	hitInfo.dst = 9e9;
 
-	for (int i = 0; i < numSpheres; i++)
+	for (int i = 0; i < spheres.length(); i++)
 	{
 		Sphere sphere = spheres[i];
 		HitInfo hit = hit_sphere(sphere.center, ray, sphere);
@@ -162,14 +155,14 @@ HitInfo calculateRayCollision(Ray ray, Sphere spheres[MAX_SPHERES])
 	return hitInfo;
 }
 
-vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
+vec3 rayTrace(Ray ray)
 {
     vec3 incomingLight = vec3(0);
     vec3 rayColor = vec3(1);
 
     for (int i = 0; i < maxDepth; i++)
 	{
-		HitInfo hitInfo = calculateRayCollision(ray, spheres);
+		HitInfo hitInfo = calculateRayCollision(ray);
 
 		if (hitInfo.hit)
 		{
@@ -183,21 +176,16 @@ vec3 rayTrace(Ray ray, Sphere spheres[MAX_SPHERES])
 		}
 		else
 		{
-//            if (i == 0)
-//			{
-//				return getBackground(ray);
-//			}
-//            vec3 emittedLight = vec3(1, 1, 1);
-//            incomingLight += emittedLight * rayColor;
 			break;
 		}
 	}
 
-    if (incomingLight .x > 0 || incomingLight.y > 0 || incomingLight.z > 0)
+    if (incomingLight != vec3(0))
 		return incomingLight;
 
     return getBackground(ray);
 }
+
 
 Ray createRay(int x, int y)
 {
@@ -210,10 +198,19 @@ Ray createRay(int x, int y)
 
 void main()
 {
-    int x = int(texCoord.x * float(width));
-    int y = int(texCoord.y * float(height));
+    ivec2 imgSize = imageSize(imgOutput);
 
-    Ray ray = createRay(x, y);
-
-    FragColor = vec4(rayTrace(ray, spheres), 1.0);
+    if (pixelCoords.x >= imgSize.x || pixelCoords.y >= imgSize.y) {
+        return;
+    }
+    
+    Ray ray = createRay(pixelCoords.x, pixelCoords.y);
+    vec3 totalIncomingLight = vec3(0);
+    for (int i = 0; i < raysPerPixel; i++)
+    {
+        totalIncomingLight += rayTrace(ray);
+    }
+    totalIncomingLight /= float(raysPerPixel);
+    
+    imageStore(imgOutput, pixelCoords, vec4(totalIncomingLight, 1.0));
 }

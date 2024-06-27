@@ -28,7 +28,8 @@
     <ClCompile Include="include\imgui\imgui_tables.cpp" />
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="shader.cpp" />
+    <ClCompile Include="RayTracer.cpp" />
+    <ClCompile Include="ShaderProgram.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
@@ -41,12 +42,14 @@
     <ClInclude Include="include\imgui\imstb_rectpack.h" />
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
+    <ClInclude Include="RayTracer.h" />
     <ClInclude Include="shader.h" />
+    <ClInclude Include="ShaderProgram.h" />
+    <ClInclude Include="Sphere.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="fragment_shader.glsl" />
+    <None Include="computeShader.glsl" />
     <None Include="include\imgui\imgui.natstepfilter" />
-    <None Include="vertex_shader.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="include\imgui\imgui.natvis" />

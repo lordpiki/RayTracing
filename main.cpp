@@ -1,4 +1,3 @@
-// normal includes
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -13,10 +12,11 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
-#define GL_SILENCE_DEPRECATION
 
 // custom includes
 #include "camera.h"
+#include "RayTracer.h"
+#include "Sphere.h"
 
 // using glm
 using glm::vec3;
@@ -30,19 +30,7 @@ using std::cout;
 using std::endl;
 using std::tie;
 
-struct Material
-{
-    vec4 color;
-    vec3 emission;
-    float emissionStrength;
-};
 
-struct Sphere
-{
-    vec3 center;
-    float radius;
-    Material material;
-};
 
 static void imgui_end_loop(GLFWwindow* window)
 {
@@ -126,7 +114,7 @@ static int fps_counter(GLFWwindow* window, float& lastTime, int& nbFrames)
 
     // If one second has passed, update the window title with the FPS
     if (currentTime - lastTime >= 1.0)
-    //if (1)
+        //if (1)
     {
         int fps = double(nbFrames) / (currentTime - lastTime);
         std::string title = "Ray Tracing - FPS: " + std::to_string(fps);
@@ -138,47 +126,12 @@ static int fps_counter(GLFWwindow* window, float& lastTime, int& nbFrames)
     return double(nbFrames) / (currentTime - lastTime);
 }
 
-static void renderScene(GLuint shaderProgram, int width, int height, Camera camera, GLuint sphereBuffer, int numSpheres, int maxDepth, int raysPerPixel)
-{
-    glUseProgram(shaderProgram);
-
-    // Set the uniform variables
-    glUniform1i(glGetUniformLocation(shaderProgram, "width"), width);
-    glUniform1i(glGetUniformLocation(shaderProgram, "height"), height);
-    glUniform1i(glGetUniformLocation(shaderProgram, "numSpheres"), numSpheres);
-    glUniform1i(glGetUniformLocation(shaderProgram, "maxDepth"), maxDepth);
-    glUniform1i(glGetUniformLocation(shaderProgram, "raysPerPixel"), raysPerPixel);
-
-	// Set the camera uniform variables
-	glUniform3fv(glGetUniformLocation(shaderProgram, "center"), 1, &camera.center[0]);
-	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel00_loc"), 1, &camera.pixel00_loc[0]);
-	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_u"), 1, &camera.pixel_delta_u[0]);
-	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_v"), 1, &camera.pixel_delta_v[0]);
-
-
-
-    // Bind the sphere buffer
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, sphereBuffer);
-
-    // Draw a full-screen quad
-    glBegin(GL_TRIANGLES);
-    glVertex2f(-1.0f, -1.0f);
-    glVertex2f(1.0f, -1.0f);
-    glVertex2f(1.0f, 1.0f);
-    glVertex2f(-1.0f, -1.0f);
-    glVertex2f(1.0f, 1.0f);
-    glVertex2f(-1.0f, 1.0f);
-    glEnd();
-
-    glUseProgram(0);
-}
-
 static tuple<int, int>set_bounding_box()
 {
     const float ratio = 16.0f / 9.0f;
     const int width = 1280;
     const int height = width / ratio;
-	return { width, height };
+    return { width, height };
 }
 
 static void cleanup(GLFWwindow* window)
@@ -192,10 +145,10 @@ static void cleanup(GLFWwindow* window)
 
 static Camera createCamera(int width, int height)
 {
-	// Create a camera
-	Camera camera;
-	camera.init(width, height);
-	return camera;
+    // Create a camera
+    Camera camera;
+    camera.init(width, height);
+    return camera;
 }
 
 static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, double& lastX, double& lastY)
@@ -239,8 +192,8 @@ static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, 
     }
     else
     {
-		glfwGetCursorPos(window, &lastX, &lastY);
-	}
+        glfwGetCursorPos(window, &lastX, &lastY);
+    }
 
     camera.update_view();
 }
@@ -276,31 +229,33 @@ static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
     ImGui::End();
 }
 
-int main()
-{
-	int width, height;
-	std::tie(width, height) = set_bounding_box();
+
+#include "RayTracer.h"
+
+int main() {
+
+    int width, height;
+    std::tie(width, height) = set_bounding_box();
 
     GLFWwindow* window = glfw_setup(width, height);
+
+    RayTracer rayTracer(width, height);
+
+    if (!rayTracer.initialize()) {
+        return -1;
+    }
+
+    Camera camera = createCamera(width, height);
 
     // Setup Dear ImGui context
     imgui_setup(window);
 
-	// Setup camera
-	Camera camera = createCamera(width, height);
-
     vector<Sphere> spheres = {
-        {vec3(0.0f, 0.0f, -3.0f), 1.0f, {vec4(0.5, 1, 1, 1), vec3(0), 0}},
-        {vec3(2.0f, 0.0f, -3.0f), 2.0f, {vec4(0.5, 0, 0.7, 1), vec3(1), 1}},
-        {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
+    {vec3(0.0f, 0.0f, -3.0f), 1.0f, {vec4(0.5, 1, 1, 1), vec3(0), 0}},
+    {vec3(2.0f, 0.0f, -3.0f), 2.0f, {vec4(0.5, 0, 0.7, 1), vec3(1), 1}},
+    {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
 
     };
-
-    //glfwSetCursorPosCallback(window, cursor_position_callback);
-
-
-    // Compile and link shaders
-    GLuint shaderProgram = createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
 
     // Variables for FPS calculation
     float lastTime = glfwGetTime();
@@ -308,45 +263,53 @@ int main()
     double lastX = 0, lastY = 0;
 
     bool showSphereEditBool = false;
-    
-    int maxDepth = 1;
+
+    int maxDepth = 2;
     int raysPerPixel = 1;
+
     // Main loop
-    while (!glfwWindowShouldClose(window))
-    {
-        // Poll for events
+    while (!glfwWindowShouldClose(window)) {
+
         glfwPollEvents();
-		imgui_start_loop();
-		int fps = fps_counter(window, lastTime, nbFrames);
+        imgui_start_loop();
+        int fps = fps_counter(window, lastTime, nbFrames);
 
         {
             ImGui::Begin("Tracer Edit");
+
             handleKeyboardAndMouse(window, camera, fps, lastX, lastY);
-            
+
             ImGui::Checkbox("Show spheres window", &showSphereEditBool);
             if (showSphereEditBool)
                 showSphereEdit(showSphereEditBool, spheres);
-            
-            ImGui::SliderInt("Max Depth", &maxDepth, 1, 30);
+
+            ImGui::SliderInt("Max Depth", &maxDepth, 2, 30);
             ImGui::SliderInt("Rays Per Pixel", &raysPerPixel, 1, 100);
+
+            static vec3 lastCameraPos = camera.center;
 
 
             ImGui::End();
         }
 
-        // Create and fill the sphere buffer
         GLuint sphereBuffer;
         glGenBuffers(1, &sphereBuffer);
         glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
         glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-        // Render the scene
-        renderScene(shaderProgram, width, height, camera, sphereBuffer, spheres.size(), maxDepth, raysPerPixel);
-		imgui_end_loop(window);
+         //Update camera and spheres in the RayTracer
+        rayTracer.updateCamera(camera);
+        rayTracer.updateSpheres(spheres);
+        rayTracer.setMaxDepth(maxDepth);
+        rayTracer.setRaysPerPixel(raysPerPixel);
+        rayTracer.render();
+        imgui_end_loop(window);
+        //glfwSwapBuffers(window);
     }
 
     // Cleanup
-	cleanup(window);
+    glfwTerminate();
+
     return 0;
 }

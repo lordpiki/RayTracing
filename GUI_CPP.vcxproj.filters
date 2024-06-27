@@ -21,9 +21,6 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="shader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="include\imgui\imgui.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
@@ -47,6 +44,12 @@
     </ClCompile>
     <ClCompile Include="include\imgui\imgui_widgets.cpp">
       <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="ShaderProgram.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RayTracer.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -83,17 +86,21 @@
     <ClInclude Include="camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ShaderProgram.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RayTracer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sphere.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vertex_shader.glsl">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="fragment_shader.glsl">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="include\imgui\imgui.natstepfilter">
       <Filter>imgui</Filter>
     </None>
+    <None Include="computeShader.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="include\imgui\imgui.natvis">
