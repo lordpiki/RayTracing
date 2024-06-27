@@ -44,7 +44,6 @@ struct Sphere
     Material material;
 };
 
-
 static void imgui_end_loop(GLFWwindow* window)
 {
     ImGui::Render();
@@ -150,27 +149,26 @@ static void renderScene(GLuint shaderProgram, int width, int height, Camera came
     glUniform1i(glGetUniformLocation(shaderProgram, "maxDepth"), maxDepth);
     glUniform1i(glGetUniformLocation(shaderProgram, "raysPerPixel"), raysPerPixel);
 
-    // Set the camera uniform variables
-    glUniform3fv(glGetUniformLocation(shaderProgram, "center"), 1, &camera.center[0]);
-    glUniform3fv(glGetUniformLocation(shaderProgram, "pixel00_loc"), 1, &camera.pixel00_loc[0]);
-    glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_u"), 1, &camera.pixel_delta_u[0]);
-    glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_v"), 1, &camera.pixel_delta_v[0]);
+	// Set the camera uniform variables
+	glUniform3fv(glGetUniformLocation(shaderProgram, "center"), 1, &camera.center[0]);
+	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel00_loc"), 1, &camera.pixel00_loc[0]);
+	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_u"), 1, &camera.pixel_delta_u[0]);
+	glUniform3fv(glGetUniformLocation(shaderProgram, "pixel_delta_v"), 1, &camera.pixel_delta_v[0]);
+
+
 
     // Bind the sphere buffer
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, sphereBuffer);
 
-    // Bind the accumulation texture
-    glActiveTexture(GL_TEXTURE0);
-
     // Draw a full-screen quad
     glBegin(GL_TRIANGLES);
     glVertex2f(-1.0f, -1.0f);
-    glVertex2f(3.0f, -1.0f);
-    glVertex2f(-1.0f, 3.0f);
+    glVertex2f(1.0f, -1.0f);
+    glVertex2f(1.0f, 1.0f);
+    glVertex2f(-1.0f, -1.0f);
+    glVertex2f(1.0f, 1.0f);
+    glVertex2f(-1.0f, 1.0f);
     glEnd();
-
-    // Copy the rendered image to the accumulation texture
-    glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 0, 0, width, height, 0);
 
     glUseProgram(0);
 }
@@ -283,13 +281,6 @@ int main()
 	int width, height;
 	std::tie(width, height) = set_bounding_box();
 
-    GLuint accumTexture;
-    glGenTextures(1, &accumTexture);
-    glBindTexture(GL_TEXTURE_2D, accumTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
     GLFWwindow* window = glfw_setup(width, height);
 
     // Setup Dear ImGui context
@@ -318,9 +309,8 @@ int main()
 
     bool showSphereEditBool = false;
     
-    int maxDepth = 2;
+    int maxDepth = 1;
     int raysPerPixel = 1;
-    bool resume = false;
     // Main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -331,23 +321,18 @@ int main()
 
         {
             ImGui::Begin("Tracer Edit");
-
-
-
             handleKeyboardAndMouse(window, camera, fps, lastX, lastY);
             
             ImGui::Checkbox("Show spheres window", &showSphereEditBool);
             if (showSphereEditBool)
                 showSphereEdit(showSphereEditBool, spheres);
             
-            ImGui::SliderInt("Max Depth", &maxDepth, 2, 30);
+            ImGui::SliderInt("Max Depth", &maxDepth, 1, 30);
             ImGui::SliderInt("Rays Per Pixel", &raysPerPixel, 1, 100);
 
 
             ImGui::End();
         }
-
-            static vec3 lastCameraPos = camera.center;
 
         // Create and fill the sphere buffer
         GLuint sphereBuffer;
