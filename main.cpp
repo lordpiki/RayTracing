@@ -316,7 +316,6 @@ int main() {
         rayTracer.render(frameNum, randomSeed);
         frameNum++;
         imgui_end_loop(window);
-        //glfwSwapBuffers(window);
     }
 
     // Cleanup

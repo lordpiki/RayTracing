@@ -25,6 +25,10 @@ private:
     int m_height;
     ShaderProgram m_computeShader;
     ShaderProgram m_renderShader;
+
+    GLuint m_imgAccumulationTexture;
+
+
     GLuint m_outputTexture;
     GLuint m_quadVAO;
     GLuint m_quadVBO;

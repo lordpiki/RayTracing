@@ -1,6 +1,7 @@
 #version 430 core
 layout (local_size_x = 16, local_size_y = 16) in;
 layout (rgba32f, binding = 0) uniform image2D imgOutput;
+layout (rgba32f, binding = 1) uniform image2D imgAccumulation;
 
 struct Material {
     vec4 color;
@@ -199,6 +200,15 @@ Ray createRay(int x, int y)
 }
 
 
+vec3 blendLight(vec3 accumulatedLight, vec3 newLight, int frame) {
+    if (frame == 1) {
+        return newLight;
+    } else {
+        float factor = 1.0 / float(frame + 1);
+        return mix(accumulatedLight, newLight, factor);
+    }
+}
+
 void main()
 {
     ivec2 imgSize = imageSize(imgOutput);
@@ -211,6 +221,9 @@ void main()
     }
     totalIncomingLight /= float(raysPerPixel);
 
-
+    vec3 oldLight = imageLoad(imgAccumulation, pixelCoords).xyz;
+    totalIncomingLight = blendLight(oldLight, totalIncomingLight, frameNum);
+    
+    imageStore(imgAccumulation, pixelCoords, vec4(totalIncomingLight, 1.0));
     imageStore(imgOutput, pixelCoords, vec4(totalIncomingLight, 1.0));
 }
