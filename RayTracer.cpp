@@ -85,8 +85,6 @@ void RayTracer::render(int frameNum, float randomSeed) {
     // insert frameNum
     glUniform1i(glGetUniformLocation(m_computeShader.getProgram(), "frameNum"), frameNum);
     glUniform1f(glGetUniformLocation(m_computeShader.getProgram(), "randomSeed"), randomSeed);
-    std::cout << randomSeed << std::endl;
-
 
     m_renderShader.use();
     glBindVertexArray(m_quadVAO);

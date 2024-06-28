@@ -179,6 +179,8 @@ static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, 
         center_movement.y += 0.1f;
 
     camera.center += (center_movement / float(fps)) * 20.0f;
+    if (center_movement != vec3(0.0f))
+		frameNum = 0;
 
     // check if user is dragging the mouse
     if (ImGui::IsMouseDragging(1, 0.0f))
@@ -192,6 +194,7 @@ static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, 
 
         camera.dir.x += dx * 0.01f;
         camera.dir.y += dy * 0.01f;
+        frameNum = 0;
     }
     else
     {
@@ -204,7 +207,7 @@ static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, 
 static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
 {
     ImGui::Begin("Spheres");
-
+    auto sphereCopy = spheres;
     if (ImGui::Button("Add Sphere"))
     {
         Sphere newSphere;
@@ -229,6 +232,8 @@ static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
             i--;
         }
     }
+    if (sphereCopy != spheres)
+        frameNum = 0;
     ImGui::End();
 }
 
@@ -270,6 +275,8 @@ int main() {
     int maxDepth = 2;
     int raysPerPixel = 1;
 
+    bool resetAccumulation = false;
+
     srand(time(0));
 
     // Main loop
@@ -278,9 +285,6 @@ int main() {
         glfwPollEvents();
         imgui_start_loop();
         int fps = fps_counter(window, lastTime, nbFrames);
-
-
-
 
         randomSeed = static_cast<float>(rand()) / static_cast<float>(RAND_MAX); // Update this line
 

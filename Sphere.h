@@ -13,6 +13,10 @@ struct Material
     vec4 color;
     vec3 emission;
     float emissionStrength;
+    bool operator==(const Material& other) const
+	{
+		return color == other.color && emission == other.emission && emissionStrength == other.emissionStrength;
+	}
 };
 
 struct Sphere
@@ -20,4 +24,9 @@ struct Sphere
     vec3 center;
     float radius;
     Material material;
+
+    bool operator==(const Sphere& other) const
+    {
+        return center == other.center && radius == other.radius && material == other.material;
+    }
 };
