@@ -6,6 +6,8 @@
 #include <tuple>
 #include "shader.h"
 #include <vector>
+#include <cstdlib> // Add this include statement
+
 
 // imgui includes
 #include "imgui.h"
@@ -30,7 +32,8 @@ using std::cout;
 using std::endl;
 using std::tie;
 
-
+int frameNum = 0;
+float randomSeed = 0;
 
 static void imgui_end_loop(GLFWwindow* window)
 {
@@ -267,12 +270,19 @@ int main() {
     int maxDepth = 2;
     int raysPerPixel = 1;
 
+    srand(time(0));
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
 
         glfwPollEvents();
         imgui_start_loop();
         int fps = fps_counter(window, lastTime, nbFrames);
+
+
+
+
+        randomSeed = static_cast<float>(rand()) / static_cast<float>(RAND_MAX); // Update this line
 
         {
             ImGui::Begin("Tracer Edit");
@@ -303,7 +313,8 @@ int main() {
         rayTracer.updateSpheres(spheres);
         rayTracer.setMaxDepth(maxDepth);
         rayTracer.setRaysPerPixel(raysPerPixel);
-        rayTracer.render();
+        rayTracer.render(frameNum, randomSeed);
+        frameNum++;
         imgui_end_loop(window);
         //glfwSwapBuffers(window);
     }

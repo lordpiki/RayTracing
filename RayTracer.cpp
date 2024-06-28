@@ -61,7 +61,7 @@ bool RayTracer::initialize() {
     return true;
 }
 
-void RayTracer::render() {
+void RayTracer::render(int frameNum, float randomSeed) {
     // Dispatch compute shader
     m_computeShader.use();
     glDispatchCompute(m_width / 16, m_height / 16, 1);
@@ -71,6 +71,12 @@ void RayTracer::render() {
 
     // Render the output texture
     glClear(GL_COLOR_BUFFER_BIT);
+
+    // insert frameNum
+    glUniform1i(glGetUniformLocation(m_computeShader.getProgram(), "frameNum"), frameNum);
+    glUniform1f(glGetUniformLocation(m_computeShader.getProgram(), "randomSeed"), randomSeed);
+    std::cout << randomSeed << std::endl;
+
 
     m_renderShader.use();
     glBindVertexArray(m_quadVAO);

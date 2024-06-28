@@ -11,7 +11,7 @@ public:
     ~RayTracer();
 
     bool initialize();
-    void render();
+    void render(int frameNum, float randomSeed);
     void updateCamera(const Camera& camera);
     void updateSpheres(const std::vector<Sphere>& spheres);
     void setMaxDepth(int depth);

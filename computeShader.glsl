@@ -39,14 +39,16 @@ uniform vec3 pixel_delta_u;
 uniform vec3 pixel_delta_v;
 
 // else
+uniform float randomSeed;
 uniform int maxDepth;
 uniform int raysPerPixel;
+uniform int frameNum = 0;
 
 ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
 
 int seed = 1;
 
-#define PI 3.14159265359
+#define PI 3.14159265359 
 
 
 HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
@@ -93,11 +95,12 @@ vec3 getBackground(Ray ray)
 }
 
 float rand() {
-    vec2 co = pixelCoords;
-    co.x += seed * (seed - 1) * 0.5;
-    co.y += seed * (seed + 1) * 1.5;
-    seed++;
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+    float x = float(pixelCoords.x) / 1280.0f;
+    float y = float(pixelCoords.y) / 720.0f;
+    vec2 co = vec2(x, y);
+    co.x *= seed;
+    seed += 1;
+    return fract(sin(dot(co ,vec2(12.9898,78.233))) * 43758.5453);
 }
 float rand_in_range(float min, float max)
 {
@@ -126,7 +129,7 @@ vec3 random_unit_vector()
 
 vec3 random_on_hemisphere(const vec3 normal)
 {
-    vec3 on_unit_sphere = vec3(rand(), rand(), rand());
+    vec3 on_unit_sphere = random_vec3();
     if (dot(on_unit_sphere, normal) > 0.0)
 	{
 		return on_unit_sphere;
@@ -200,10 +203,6 @@ void main()
 {
     ivec2 imgSize = imageSize(imgOutput);
 
-    if (pixelCoords.x >= imgSize.x || pixelCoords.y >= imgSize.y) {
-        return;
-    }
-    
     Ray ray = createRay(pixelCoords.x, pixelCoords.y);
     vec3 totalIncomingLight = vec3(0);
     for (int i = 0; i < raysPerPixel; i++)
@@ -211,6 +210,7 @@ void main()
         totalIncomingLight += rayTrace(ray);
     }
     totalIncomingLight /= float(raysPerPixel);
-    
+
+
     imageStore(imgOutput, pixelCoords, vec4(totalIncomingLight, 1.0));
 }
