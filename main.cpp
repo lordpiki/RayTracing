@@ -7,7 +7,10 @@
 #include "shader.h"
 #include <vector>
 #include <cstdlib> // Add this include statement
-
+#include <ctime> // Add this include statement
+#include <fstream>
+#include <string>
+#include <math.h>
 
 // imgui includes
 #include "imgui.h"
@@ -21,6 +24,7 @@
 #include "Sphere.h"
 
 // using glm
+using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 
@@ -146,6 +150,12 @@ static void cleanup(GLFWwindow* window)
     glfwTerminate();
 }
 
+
+static vec3 rotate90xz(vec3 dir)
+{
+    return vec3(dir.z, 0, -dir.x);
+}
+
 static Camera createCamera(int width, int height)
 {
     // Create a camera
@@ -157,34 +167,48 @@ static Camera createCamera(int width, int height)
 static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, double& lastX, double& lastY)
 {
     if (ImGui::Button("Reset camera pos"))
+    {
         camera.center = vec3(0.0f, 0.0f, 0.0f);
+        frameNum = 0;
+    }
 
     vec3 center_movement = vec3(0.0f, 0.0f, 0.0f);
 
-    glm::vec3 direction = camera.lookat - camera.center;
 
     // Calculate the angles in each axis
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        center_movement.z -= 0.1f;
+    {
+        center_movement.x -= 0.1f * camera.dir.x;
+        center_movement.z -= 0.1f * camera.dir.z;
+    }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        center_movement.z += 0.1f;
+    {
+        center_movement.x += 0.1f * camera.dir.x;
+        center_movement.z += 0.1f * camera.dir.z;
+    }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        center_movement.x -= 0.1f;
+        center_movement -= 0.1f * rotate90xz(camera.dir);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        center_movement.x += 0.1f;
+        center_movement += 0.1f * rotate90xz(camera.dir);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
         center_movement.y -= 0.1f;
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         center_movement.y += 0.1f;
 
     camera.center += (center_movement / float(fps)) * 20.0f;
+
+    ImGui::Text("Camera direction: %f %f %f", camera.dir.x, camera.dir.y, camera.dir.z);
+
+    camera.lookfrom = camera.center;
+
     if (center_movement != vec3(0.0f))
 		frameNum = 0;
 
     // check if user is dragging the mouse
     if (ImGui::IsMouseDragging(1, 0.0f))
     {
+
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
         double dx = xpos - lastX;
@@ -192,8 +216,10 @@ static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, 
         lastX = xpos;
         lastY = ypos;
 
-        camera.dir.x += dx * 0.01f;
-        camera.dir.y += dy * 0.01f;
+        camera.tx -= dx * 0.01f;
+
+        camera.dir = vec3(cos(camera.tx), camera.dir.y += dy * 0.01, sin(camera.tx));
+
         frameNum = 0;
     }
     else
@@ -204,10 +230,58 @@ static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, 
     camera.update_view();
 }
 
+
+
+static void saveSphereConfiguration(const vector<Sphere>& spheres, const string& fileName)
+{
+    std::ofstream file(fileName + ".txt");
+    for (const auto& sphere : spheres)
+    {
+        file << sphere.center.x << " " << sphere.center.y << " " << sphere.center.z << " ";
+        file << sphere.radius << " ";
+        file << sphere.material.color.r << " " << sphere.material.color.g << " " << sphere.material.color.b << " ";
+        file << sphere.material.emission.r << " " << sphere.material.emission.g << " " << sphere.material.emission.b << " ";
+        file << sphere.material.emissionStrength << std::endl;
+    }
+    file.close();
+}
+
+static void loadSphereConfiguration(vector<Sphere>& spheres, const string& fileName)
+{
+    std::ifstream file(fileName + ".txt");
+    if (!file.is_open())
+    {
+        std::cerr << "Failed to open file " << fileName << std::endl;
+        return;
+    }
+
+    spheres.clear();
+    while (!file.eof())
+    {
+        Sphere sphere;
+        file >> sphere.center.x >> sphere.center.y >> sphere.center.z;
+        file >> sphere.radius;
+        file >> sphere.material.color.r >> sphere.material.color.g >> sphere.material.color.b;
+        file >> sphere.material.emission.r >> sphere.material.emission.g >> sphere.material.emission.b;
+        file >> sphere.material.emissionStrength;
+        spheres.push_back(sphere);
+    }
+    file.close();
+}
+
 static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
 {
     ImGui::Begin("Spheres");
+
     auto sphereCopy = spheres;
+    ImGui::Text("Save/Load Configuration");
+    char fileName[128] = "conf";
+    ImGui::InputText("File Name", fileName, 128);
+    if (ImGui::Button("Save"))
+		saveSphereConfiguration(spheres, fileName);
+    if (ImGui::Button("Load"))
+        loadSphereConfiguration(spheres, fileName);
+
     if (ImGui::Button("Add Sphere"))
     {
         Sphere newSphere;
@@ -238,7 +312,6 @@ static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
 }
 
 
-#include "RayTracer.h"
 
 int main() {
 
