@@ -156,13 +156,6 @@ static vec3 rotate90xz(vec3 dir)
     return vec3(dir.z, 0, -dir.x);
 }
 
-static Camera createCamera(int width, int height)
-{
-    // Create a camera
-    Camera camera;
-    camera.init(width, height);
-    return camera;
-}
 
 static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, double& lastX, double& lastY)
 {
@@ -326,7 +319,7 @@ int main() {
         return -1;
     }
 
-    Camera camera = createCamera(width, height);
+    Camera camera(width, height);
 
     // Setup Dear ImGui context
     imgui_setup(window);
@@ -335,7 +328,6 @@ int main() {
     {vec3(0.0f, 0.0f, -3.0f), 1.0f, {vec4(0.5, 1, 1, 1), vec3(0), 0}},
     {vec3(2.0f, 0.0f, -3.0f), 2.0f, {vec4(0.5, 0, 0.7, 1), vec3(1), 1}},
     {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
-
     };
 
     // Variables for FPS calculation

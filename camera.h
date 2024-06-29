@@ -35,13 +35,9 @@ public:
     vec3 pixel_delta_u;
     vec3 pixel_delta_v;
 
-	void init(int width_, int height_)
+	Camera(int width_, int height_) : width(width_), height(height_)
 	{
-		width = width_;
-		height = height_;
-        //pixel_samples_scale = 1.0 / samples_per_pixel;
-
-        update_view();
+		update_view();
 	}
 
     void update_view()
