@@ -89,11 +89,11 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
 
 vec3 getBackground(Ray ray)
 {
-    return vec3(0);
     vec3 unit_dir = normalize(ray.dir);
     float t = 0.5f * (unit_dir.y + 1.0f);
     return (1.0 - t) * vec3(1, 1, 1) + t * vec3(0.5, 0.7, 1.0);
 }
+
 
 float rand() {
     float x = float(pixelCoords.x) / 1280.0f;
@@ -175,8 +175,9 @@ vec3 rayTrace(Ray ray)
 
             Material material = hitInfo.material;
             vec3 emittedLight = material.emissionStrength * material.emission;
+            float lightStrength = dot(ray.dir, hitInfo.normal);
             incomingLight += emittedLight * rayColor.xyz;
-            rayColor *= material.color.xyz;
+            rayColor *= material.color.xyz * lightStrength;
 		}
 		else
 		{
@@ -184,10 +185,7 @@ vec3 rayTrace(Ray ray)
 		}
 	}
 
-    if (incomingLight != vec3(0))
-		return incomingLight;
-
-    return getBackground(ray);
+    return incomingLight;
 }
 
 
