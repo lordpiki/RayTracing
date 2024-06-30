@@ -121,9 +121,9 @@ float rand() {
     float x = float(pixelCoords.x) / 1280.0f;
     float y = float(pixelCoords.y) / 720.0f;
     vec2 co = vec2(x, y);
-    co.x *= seed + seed * randomSeed;
+    co.x *= seed + seed * randomSeed ;
     seed += 1;
-    return fract(sin(dot(co ,vec2(12.9898,78.233))) * 43758.5453);
+    return 2 * (fract(sin(dot(co ,vec2(12.9898,78.233))) * 43758.5453) -0.5);
 }
 float rand_in_range(float min, float max)
 {
@@ -135,25 +135,10 @@ vec3 random_vec3()
 	return vec3(rand(), rand(), rand());
 }
 
-vec3 random_in_unit_sphere()
-{
-    while (true) {
-        vec3 p = random_vec3();
-        float len = length(p);
-        if (len * len < 1)
-            return p;
-    }
-}
-
-vec3 random_unit_vector()
-{
-    return normalize(random_in_unit_sphere());
-}
-
 vec3 random_on_hemisphere(const vec3 normal)
 {
     vec3 on_unit_sphere = random_vec3();
-    if (dot(on_unit_sphere, normal) > 0.0)
+    if (dot(normal, on_unit_sphere) > 0.0)
 	{
 		return on_unit_sphere;
 	}
@@ -195,11 +180,12 @@ vec3 rayTrace(Ray ray)
 			ray.origin = hitInfo.point;
             ray.dir = random_on_hemisphere(hitInfo.normal);
 
+
             Material material = hitInfo.material;
             vec3 emittedLight = material.emissionStrength * material.emission;
-            float lightStrength = dot(ray.dir, hitInfo.normal);
+            //float lightStrength = dot(ray.dir, hitInfo.normal);
             incomingLight += emittedLight * rayColor.xyz;
-            rayColor *= material.color.xyz * lightStrength * 2;
+            rayColor *= material.color.xyz ;
 
 
 		}
