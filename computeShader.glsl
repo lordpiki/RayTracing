@@ -9,6 +9,20 @@ struct Material {
     float emissionStrength;
 };
 
+struct Triangle{
+    vec3 posA, posB, posC;
+    vec3 normalA, normalB, normalC;
+};
+
+struct MeshInfo{
+	uint triangleCount;
+	uint materialIndex;
+    vec3 boundsMin;
+    vec3 boundsMax;
+    Material material;
+};
+
+
 struct Sphere {
     vec3 center;
     float radius;
@@ -31,6 +45,14 @@ struct HitInfo
 
 layout(std430, binding = 0) buffer SphereBuffer {
     Sphere spheres[];
+};
+
+layout(std430, binding = 1) buffer MeshBuffer {
+	MeshInfo meshes[];
+};
+
+layout(std430, binding = 2) buffer TriangleBuffer {
+	Triangle triangles[];
 };
 
 // camera 
@@ -177,7 +199,9 @@ vec3 rayTrace(Ray ray)
             vec3 emittedLight = material.emissionStrength * material.emission;
             float lightStrength = dot(ray.dir, hitInfo.normal);
             incomingLight += emittedLight * rayColor.xyz;
-            rayColor *= material.color.xyz * lightStrength;
+            rayColor *= material.color.xyz * lightStrength * 2;
+
+
 		}
 		else
 		{

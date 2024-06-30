@@ -329,6 +329,7 @@ int main() {
     {vec3(2.0f, 0.0f, -3.0f), 2.0f, {vec4(0.5, 0, 0.7, 1), vec3(1), 1}},
     {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
     };
+    
 
     // Variables for FPS calculation
     float lastTime = glfwGetTime();
