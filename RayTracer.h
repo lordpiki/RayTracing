@@ -4,6 +4,7 @@
 #include "camera.h"
 #include <vector>
 #include "Sphere.h"
+#include "MeshInfo.h"
 
 class RayTracer {
 public:
@@ -13,9 +14,12 @@ public:
     bool initialize();
     void render(int frameNum, float randomSeed);
     void updateCamera(const Camera& camera);
-    void updateSpheres(const std::vector<Sphere>& spheres);
     void setMaxDepth(int depth);
     void setRaysPerPixel(int rays);
+
+    void updateTriangles(vector<Triangle> triangles);
+    void updateMeshInfos(vector<MeshInfo> meshes);
+    void updateSpheres(const std::vector<Sphere>& spheres);
 
 private:
     bool loadComputeShader();
@@ -32,7 +36,10 @@ private:
     GLuint m_outputTexture;
     GLuint m_quadVAO;
     GLuint m_quadVBO;
+
     GLuint m_sphereBuffer;
+    GLuint m_meshInfoBuffer;
+    GLuint m_triangleBuffer;
 
     int m_maxDepth;
     int m_raysPerPixel;

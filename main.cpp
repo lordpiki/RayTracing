@@ -22,6 +22,7 @@
 #include "camera.h"
 #include "RayTracer.h"
 #include "Sphere.h"
+#include "MeshInfo.h"
 
 // using glm
 using glm::vec2;
@@ -330,6 +331,23 @@ int main() {
     {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
     };
     
+    vector<Triangle> triangles = {
+        {vec3(-1.0f, -1.0f, -1.0f), vec3(1.0f, -1.0f, -1.0f), vec3(1.0f, 1.0f, -1.0f),
+        vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f)},
+        {vec3(-1.0f, -1.0f, -1.0f), vec3(1.0f, 1.0f, -1.0f), vec3(-1.0f, 1.0f, -1.0f),
+        vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f)},
+        {vec3(-1.0f, -1.0f, -1.0f), vec3(-1.0f, 1.0f, -1.0f), vec3(-1.0f, 1.0f, 1.0f),
+        vec3(1.0f, 0.0f, 0.0f), vec3(1.0f, 0.0f, 0.0f), vec3(1.0f, 0.0f, 0.0f)},
+        {vec3(-1.0f, -1.0f, -1.0f), vec3(-1.0f, 1.0f, 1.0f), vec3(-1.0f, -1.0f, 1.0f),
+        vec3(1.0f, 0.0f, 0.0f), vec3(1.0f, 0.0f, 0.0f), vec3(1.0f, 0.0f, 0.0f)} };
+
+    vector<MeshInfo> meshInfos;
+    meshInfos.push_back(MeshInfo());
+    meshInfos[0].material = { vec4(0.5, 1, 1, 1), vec3(0), 0 };
+    meshInfos[0].addTriangleVec(triangles);
+
+
+
 
     // Variables for FPS calculation
     float lastTime = glfwGetTime();
@@ -372,14 +390,10 @@ int main() {
             ImGui::End();
         }
 
-        GLuint sphereBuffer;
-        glGenBuffers(1, &sphereBuffer);
-        glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
-        glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
          //Update camera and spheres in the RayTracer
         rayTracer.updateCamera(camera);
+        rayTracer.updateTriangles(triangles);
+        rayTracer.updateMeshInfos(meshInfos);
         rayTracer.updateSpheres(spheres);
         rayTracer.setMaxDepth(maxDepth);
         rayTracer.setRaysPerPixel(raysPerPixel);
