@@ -70,9 +70,7 @@ bool RayTracer::initialize() {
 
     // init the buffers
     glGenBuffers(1, &m_sphereBuffer);
-    glGenBuffers(1, &m_sphereBuffer2);
     glGenBuffers(1, &m_meshBuffer);
-
 
     return true;
 }
@@ -150,38 +148,19 @@ void RayTracer::updateCamera(const Camera& camera) {
 
 }
 
-void RayTracer::updateTriangles(vector<Triangle> triangles)
-{
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_triangleBuffer);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, triangles.size() * sizeof(Triangle), triangles.data(), GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_triangleBuffer);
-}
 
-void RayTracer::updateMeshInfos(vector<MeshInfo> meshes)
-{
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_meshInfoBuffer);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, meshes.size() * sizeof(MeshInfo), meshes.data(), GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_meshInfoBuffer);
-}
-
-void RayTracer::updateSpheres(const std::vector<Sphere>& spheres) {
+void RayTracer::updateSpheres(const vector<Sphere>& spheres) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_sphereBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_sphereBuffer);
 }
 
-void RayTracer::updateSpheres2(const vector<Sphere2>& spheres2)
-{
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_sphereBuffer2);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, spheres2.size() * sizeof(Sphere2), spheres2.data(), GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_sphereBuffer2);
-}
 
 void RayTracer::updateMeshes(const vector<MeshInfo>& meshes)
 {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_meshBuffer);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, meshes.size() * sizeof(MeshInfo), meshes.data(), GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_meshBuffer);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_meshBuffer);
 
 }
 

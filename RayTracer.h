@@ -16,15 +16,11 @@ public:
     bool initialize();
     void render(int frameNum, float randomSeed);
     void updateCamera(const Camera& camera);
-    void updateSpheres(const vector<Sphere>& spheres);
-    void updateSpheres2(const vector<Sphere2>& spheres2);
-    void updateMeshes(const vector<MeshInfo>& meshes);
     void setMaxDepth(int depth);
     void setRaysPerPixel(int rays);
 
-    void updateTriangles(vector<Triangle> triangles);
-    void updateMeshInfos(vector<MeshInfo> meshes);
-    void updateSpheres(const std::vector<Sphere>& spheres);
+    void updateMeshes(const vector<MeshInfo>& meshes);
+    void updateSpheres(const vector<Sphere>& spheres);
 
 private:
     bool loadComputeShader();
@@ -43,6 +39,7 @@ private:
     GLuint m_quadVBO;
 
     GLuint m_sphereBuffer;
+    GLuint m_meshBuffer;
 
     int m_maxDepth;
     int m_raysPerPixel;

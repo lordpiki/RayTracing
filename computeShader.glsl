@@ -29,13 +29,6 @@ struct Sphere {
     Material material;
 };
 
-struct Sphere2
-{
-	vec3 center;
-	float radius;
-	Material material;
-};
-
 struct Ray {
 	vec3 origin;
 	vec3 dir;
@@ -54,11 +47,8 @@ layout(std430, binding = 0) buffer SphereBuffer {
     Sphere spheres[];
 };
 
-layout(std430, binding = 1) buffer SphereBuffer2 {
-    Sphere spheres2[];
-};
 
-layout (std430, binding = 2) buffer MeshBuffer {
+layout (std430, binding = 1) buffer MeshBuffer {
 	MeshInfo meshes[];
 };
 
@@ -131,8 +121,6 @@ bool hit_mesh(Ray ray, vec3 boundsMin, vec3 boundsMax)
 }
 
 
-
-
 vec3 getBackground(Ray ray)
 {
     vec3 unit_dir = normalize(ray.dir);
@@ -195,9 +183,14 @@ HitInfo calculateRayCollision(Ray ray)
 	hitInfo.hit = false;
 	hitInfo.dst = 9e9;
 
-	for (int i = 0; i < spheres2.length(); i++)
+
+    // Check meshes
+
+
+    // Check spheres
+	for (int i = 0; i < spheres.length(); i++)
 	{
-		Sphere sphere = spheres2[i];
+		Sphere sphere = spheres[i];
 		HitInfo hit = hit_sphere(sphere.center, ray, sphere);
 		if (hit.hit && hit.dst < hitInfo.dst)
 		{
