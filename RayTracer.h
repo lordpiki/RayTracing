@@ -22,6 +22,10 @@ public:
     void setMaxDepth(int depth);
     void setRaysPerPixel(int rays);
 
+    void updateTriangles(vector<Triangle> triangles);
+    void updateMeshInfos(vector<MeshInfo> meshes);
+    void updateSpheres(const std::vector<Sphere>& spheres);
+
 private:
     bool loadComputeShader();
     bool loadRenderShader();
@@ -39,8 +43,6 @@ private:
     GLuint m_quadVBO;
 
     GLuint m_sphereBuffer;
-    GLuint m_sphereBuffer2;
-    GLuint m_meshBuffer;
 
     int m_maxDepth;
     int m_raysPerPixel;

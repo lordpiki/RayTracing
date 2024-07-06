@@ -22,6 +22,7 @@
 #include "camera.h"
 #include "RayTracer.h"
 #include "Sphere.h"
+#include "MeshInfo.h"
 
 // using glm
 using glm::vec2;
@@ -340,6 +341,7 @@ int main() {
     vector<MeshInfo> meshes;
     meshes.push_back(mesh);
 
+
     // Variables for FPS calculation
     float lastTime = glfwGetTime();
     int nbFrames = 0;
@@ -380,12 +382,15 @@ int main() {
             ImGui::End();
         }
 
-
+        GLuint sphereBuffer;
+        glGenBuffers(1, &sphereBuffer);
+        glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
+        glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
          //Update camera and spheres in the RayTracer
         rayTracer.updateCamera(camera);
-        rayTracer.updateMeshes(meshes);
-        rayTracer.updateSpheres2(spheres2);
+        rayTracer.updateSpheres(spheres);
         rayTracer.setMaxDepth(maxDepth);
         rayTracer.setRaysPerPixel(raysPerPixel);
         rayTracer.render(frameNum, randomSeed);

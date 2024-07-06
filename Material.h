@@ -1,8 +1,11 @@
 #pragma once
+#include <iostream>
+#include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 // using glm
+using std::vector;
 using glm::vec3;
 using glm::vec4;
 

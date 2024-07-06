@@ -5,6 +5,8 @@
 struct Triangle {
     vec3 posA, posB, posC;
     vec3 normalA, normalB, normalC;
+
+
 };
 
 struct MeshInfo {

@@ -67,15 +67,13 @@ uniform vec3 center;
 uniform vec3 pixel00_loc;
 uniform vec3 pixel_delta_u;
 uniform vec3 pixel_delta_v;
+ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
 
 // else
 uniform float randomSeed;
 uniform int maxDepth;
 uniform int raysPerPixel;
 uniform int frameNum = 0;
-
-ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
-
 int seed = 1;
 
 #define PI 3.14159265359 
@@ -116,6 +114,25 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
     return hitInfo;
 }
 
+
+bool hit_mesh(Ray ray, vec3 boundsMin, vec3 boundsMax)
+{
+    const float EPSILON = 1e-6;
+    vec3 invDir = 1.0 / (ray.dir + vec3(EPSILON));
+    vec3 t0 = (boundsMin - ray.origin) * invDir;
+    vec3 t1 = (boundsMax - ray.origin) * invDir;
+    vec3 tmin = min(t0, t1);
+    vec3 tmax = max(t0, t1);
+
+    float tNear = max(max(tmin.x, tmin.y), tmin.z);
+    float tFar = min(min(tmax.x, tmax.y), tmax.z);
+
+    return tNear <= tFar && tFar > EPSILON;
+}
+
+
+
+
 vec3 getBackground(Ray ray)
 {
     vec3 unit_dir = normalize(ray.dir);
@@ -152,6 +169,24 @@ vec3 random_on_hemisphere(const vec3 normal)
 	return -on_unit_sphere;
 }
 
+vec3 getEnviromentLight(Ray ray)
+{
+	vec3 skyColorHorizon = vec3(0.5, 0.7, 1.0);
+    vec3 skyColorZenith = vec3(0.1, 0.1, 0.1);
+    vec3 sunLightDir = (vec3(-0.5, -0.5, 0.5));
+    float sunFocus = 0.1;
+    float sunIntensity = 1.0;
+    vec3 groundColor = vec3(0.3, 0.3, 0.3);
+
+    float skyGradientT = pow(smoothstep(0.0, 0.4, ray.dir.y), 0.35);
+    vec3 skyGradient = mix(skyColorZenith, skyColorHorizon, skyGradientT);
+    float sun = pow(max(0, dot(ray.dir, -sunLightDir)), sunFocus) * sunIntensity;
+
+    // Combine ground and sky
+    float groundT = smoothstep(-0.01, 0, ray.dir.y);
+    float sunMask = float(groundT >= 1);
+    return mix(groundColor, skyGradient, groundT) + sunMask * sun;
+}
 
 
 HitInfo calculateRayCollision(Ray ray)
@@ -178,6 +213,15 @@ vec3 rayTrace(Ray ray)
     vec3 incomingLight = vec3(0);
     vec3 rayColor = vec3(1);
 
+    for (int i = 0; i < meshes.length(); i++)
+    {
+        MeshInfo mesh = meshes[i];
+        if (hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
+        {
+            return mesh.material.color.xyz;
+        }
+    }
+
     for (int i = 0; i < maxDepth; i++)
 	{
 		HitInfo hitInfo = calculateRayCollision(ray);
@@ -185,7 +229,7 @@ vec3 rayTrace(Ray ray)
 		if (hitInfo.hit)
 		{
 			ray.origin = hitInfo.point;
-            ray.dir = random_on_hemisphere(hitInfo.normal);
+            ray.dir = normalize(hitInfo.normal + random_vec3());
 
 
             Material material = hitInfo.material;
@@ -209,8 +253,8 @@ vec3 rayTrace(Ray ray)
 Ray createRay(int x, int y)
 {
     vec3 pixel_center = pixel00_loc + (x * pixel_delta_u) + (y * pixel_delta_v);
-    vec3 ray_direction = pixel_center - center;
-    Ray r = Ray(center, ray_direction);
+    vec3 ray_dir = pixel_center - center;
+    Ray r = Ray(center, ray_dir);
     return r;
 }
 
