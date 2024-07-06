@@ -107,18 +107,23 @@ HitInfo hit_sphere(vec3 center, Ray ray, Sphere sphere)
 
 bool hit_mesh(Ray ray, vec3 boundsMin, vec3 boundsMax)
 {
+
     const float EPSILON = 1e-6;
     vec3 invDir = 1.0 / (ray.dir + vec3(EPSILON));
     vec3 t0 = (boundsMin - ray.origin) * invDir;
     vec3 t1 = (boundsMax - ray.origin) * invDir;
     vec3 tmin = min(t0, t1);
     vec3 tmax = max(t0, t1);
-
     float tNear = max(max(tmin.x, tmin.y), tmin.z);
     float tFar = min(min(tmax.x, tmax.y), tmax.z);
-
+    
+    float dst = tNear;
+    vec3 hitPoint = ray.origin + ray.dir * dst;
+    vec3 normal = -sign(ray.dir) * step(tmin.yzx, tmin.xyz) * step(tmin.zxy, tmin.xyz);
+    
     return tNear <= tFar && tFar > EPSILON;
 }
+
 
 
 vec3 getBackground(Ray ray)
@@ -184,9 +189,6 @@ HitInfo calculateRayCollision(Ray ray)
 	hitInfo.dst = 9e9;
 
 
-    // Check meshes
-
-
     // Check spheres
 	for (int i = 0; i < spheres.length(); i++)
 	{
@@ -209,10 +211,10 @@ vec3 rayTrace(Ray ray)
     for (int i = 0; i < meshes.length(); i++)
     {
         MeshInfo mesh = meshes[i];
-        if (hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
-        {
-            return mesh.material.color.xyz;
-        }
+		if (hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
+		{
+			return vec3(1,0,0);
+		}
     }
 
     for (int i = 0; i < maxDepth; i++)
