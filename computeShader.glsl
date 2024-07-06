@@ -14,12 +14,12 @@ struct Triangle{
     vec3 normalA, normalB, normalC;
 };
 
-struct MeshInfo{
-	uint triangleCount;
-	uint materialIndex;
+struct MeshInfo {
     vec3 boundsMin;
-    vec3 boundsMax;
+    float triangleCount;
     Material material;
+    vec3 boundsMax;
+    float triangleIndex;
 };
 
 
@@ -27,6 +27,13 @@ struct Sphere {
     vec3 center;
     float radius;
     Material material;
+};
+
+struct Sphere2
+{
+	vec3 center;
+	float radius;
+	Material material;
 };
 
 struct Ray {
@@ -47,12 +54,12 @@ layout(std430, binding = 0) buffer SphereBuffer {
     Sphere spheres[];
 };
 
-layout(std430, binding = 1) buffer MeshBuffer {
-	MeshInfo meshes[];
+layout(std430, binding = 1) buffer SphereBuffer2 {
+    Sphere spheres2[];
 };
 
-layout(std430, binding = 2) buffer TriangleBuffer {
-	Triangle triangles[];
+layout (std430, binding = 2) buffer MeshBuffer {
+	MeshInfo meshes[];
 };
 
 // camera 
@@ -153,9 +160,9 @@ HitInfo calculateRayCollision(Ray ray)
 	hitInfo.hit = false;
 	hitInfo.dst = 9e9;
 
-	for (int i = 0; i < spheres.length(); i++)
+	for (int i = 0; i < spheres2.length(); i++)
 	{
-		Sphere sphere = spheres[i];
+		Sphere sphere = spheres2[i];
 		HitInfo hit = hit_sphere(sphere.center, ray, sphere);
 		if (hit.hit && hit.dst < hitInfo.dst)
 		{
@@ -183,8 +190,8 @@ vec3 rayTrace(Ray ray)
 
             Material material = hitInfo.material;
             vec3 emittedLight = material.emissionStrength * material.emission;
-            //float lightStrength = dot(ray.dir, hitInfo.normal);
-            incomingLight += emittedLight * rayColor.xyz;
+            float lightStrength = dot(ray.dir, hitInfo.normal);
+            incomingLight += emittedLight * rayColor.xyz * lightStrength * 2;
             rayColor *= material.color.xyz ;
 
 

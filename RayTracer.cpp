@@ -68,6 +68,12 @@ bool RayTracer::initialize() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 
+    // init the buffers
+    glGenBuffers(1, &m_sphereBuffer);
+    glGenBuffers(1, &m_sphereBuffer2);
+    glGenBuffers(1, &m_meshBuffer);
+
+
     return true;
 }
 
@@ -148,6 +154,21 @@ void RayTracer::updateSpheres(const std::vector<Sphere>& spheres) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_sphereBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_sphereBuffer);
+}
+
+void RayTracer::updateSpheres2(const vector<Sphere2>& spheres2)
+{
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_sphereBuffer2);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, spheres2.size() * sizeof(Sphere2), spheres2.data(), GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_sphereBuffer2);
+}
+
+void RayTracer::updateMeshes(const vector<MeshInfo>& meshes)
+{
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_meshBuffer);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, meshes.size() * sizeof(MeshInfo), meshes.data(), GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_meshBuffer);
+
 }
 
 void RayTracer::setMaxDepth(int depth) {

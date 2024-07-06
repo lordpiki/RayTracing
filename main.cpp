@@ -288,7 +288,7 @@ static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
     {
         ImGui::Text("Sphere %d", i);
         ImGui::SliderFloat3(("Center##" + std::to_string(i)).c_str(), &spheres[i].center[0], -20.0f, 20.0f);
-        ImGui::SliderFloat(("Radius##" + std::to_string(i)).c_str(), &spheres[i].radius, 0.1f, 20.0f);
+        ImGui::SliderFloat(("Radius##" + std::to_string(i)).c_str(), &spheres[i].radius, 0.1f, 50.0f);
         ImGui::ColorEdit3(("Color##" + std::to_string(i)).c_str(), &spheres[i].material.color[0]);
         ImGui::ColorEdit3(("Emission##" + std::to_string(i)).c_str(), &spheres[i].material.emission[0]);
         ImGui::SliderFloat(("Emission Strength##" + std::to_string(i)).c_str(), &spheres[i].material.emissionStrength, 0.0f, 1.0f);
@@ -329,7 +329,16 @@ int main() {
     {vec3(2.0f, 0.0f, -3.0f), 2.0f, {vec4(0.5, 0, 0.7, 1), vec3(1), 1}},
     {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
     };
+
+    vector<Sphere2> spheres2 = {
+    {vec3(0.0f, 0.0f, -3.0f), 1.0f, {vec4(0.5, 1, 1, 1), vec3(0), 0}},
+    {vec3(2.0f, 0.0f, -3.0f), 2.0f, {vec4(0.5, 0, 0.7, 1), vec3(1), 1}},
+    {vec3(0.0f, 20.5f, -4.0f), 10.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
+    };
     
+    MeshInfo mesh = { vec3(-13.0f, -31.0f, -13.0f), 13, {vec4(0.5, 0.9, 0.1, 0.5), vec3(13), 13}, vec3(13.0f, 13.0f, 13.0f), 2 };
+    vector<MeshInfo> meshes;
+    meshes.push_back(mesh);
 
     // Variables for FPS calculation
     float lastTime = glfwGetTime();
@@ -368,19 +377,15 @@ int main() {
 
             static vec3 lastCameraPos = camera.center;
 
-
             ImGui::End();
         }
 
-        GLuint sphereBuffer;
-        glGenBuffers(1, &sphereBuffer);
-        glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
-        glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
 
          //Update camera and spheres in the RayTracer
         rayTracer.updateCamera(camera);
-        rayTracer.updateSpheres(spheres);
+        rayTracer.updateMeshes(meshes);
+        rayTracer.updateSpheres2(spheres2);
         rayTracer.setMaxDepth(maxDepth);
         rayTracer.setRaysPerPixel(raysPerPixel);
         rayTracer.render(frameNum, randomSeed);

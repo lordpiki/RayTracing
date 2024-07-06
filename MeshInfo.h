@@ -8,9 +8,10 @@ struct Triangle {
 };
 
 struct MeshInfo {
-    unsigned int triangleCount;
-    unsigned int materialIndex;
     vec3 boundsMin;
-    vec3 boundsMax;
+    float triangleCount;
     Material material;
+    vec3 boundsMax;
+    float triangleIndex;
 };
+
