@@ -71,6 +71,7 @@ bool RayTracer::initialize() {
     // init the buffers
     glGenBuffers(1, &m_sphereBuffer);
     glGenBuffers(1, &m_meshBuffer);
+    glGenBuffers(1, &m_triangleBuffer);
 
     return true;
 }
@@ -153,6 +154,14 @@ void RayTracer::updateSpheres(const vector<Sphere>& spheres) {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_sphereBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_sphereBuffer);
+}
+
+void RayTracer::updateTriangles(const vector<Triangle>& triangles)
+{
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_triangleBuffer);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, triangles.size() * sizeof(Triangle), triangles.data(), GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_triangleBuffer);
+
 }
 
 

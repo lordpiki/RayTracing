@@ -21,6 +21,7 @@ public:
 
     void updateMeshes(const vector<MeshInfo>& meshes);
     void updateSpheres(const vector<Sphere>& spheres);
+    void updateTriangles(const vector<Triangle>& triangles);
 
 private:
     bool loadComputeShader();
@@ -40,6 +41,7 @@ private:
 
     GLuint m_sphereBuffer;
     GLuint m_meshBuffer;
+    GLuint m_triangleBuffer;
 
     int m_maxDepth;
     int m_raysPerPixel;

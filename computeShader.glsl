@@ -11,15 +11,15 @@ struct Material {
 
 struct Triangle{
     vec3 posA, posB, posC;
-    vec3 normalA, normalB, normalC;
+    //vec3 normalA, normalB, normalC;
 };
 
 struct MeshInfo {
     vec3 boundsMin;
-    float triangleCount;
+    uint triangleCount;
     Material material;
     vec3 boundsMax;
-    float triangleIndex;
+    uint triangleIndex;
 };
 
 
@@ -43,6 +43,15 @@ struct HitInfo
     Material material;
 };
 
+struct TriangleHitInfo {
+	bool hit;
+	float dst;
+	vec3 point;
+	vec3 normal;
+	int triIndex;
+};
+
+
 layout(std430, binding = 0) buffer SphereBuffer {
     Sphere spheres[];
 };
@@ -50,6 +59,10 @@ layout(std430, binding = 0) buffer SphereBuffer {
 
 layout (std430, binding = 1) buffer MeshBuffer {
 	MeshInfo meshes[];
+};
+
+layout (std430, binding = 2) buffer TriangleBuffer {
+	Triangle triangles[];
 };
 
 // camera 
@@ -124,7 +137,35 @@ bool hit_mesh(Ray ray, vec3 boundsMin, vec3 boundsMax)
     return tNear <= tFar && tFar > EPSILON;
 }
 
+TriangleHitInfo hit_triangle(Ray ray, Triangle tri)
+{
+	vec3 edge1 = tri.posB - tri.posA;
+	vec3 edge2 = tri.posC - tri.posA;
+    vec3 normalVec = cross(edge1, edge2);
+    vec3 ao = ray.origin - tri.posA;
+    vec3 dao = cross(ao, ray.dir);
 
+    
+
+    float determ = -dot(ray.dir, normalVec);
+    float invDet = 1 / determ;
+
+    // Calculate dst to triangle & barycentric coordinates of intersection point
+    float dst = dot(ao, normalVec) * invDet;
+    float u = dot(edge2, dao) * invDet;
+    float v = -dot(edge1, dao) * invDet;
+    float w = 1 - u - v;
+
+
+    // Initialize hit info
+    TriangleHitInfo hitInfo;
+    hitInfo.hit =  dst >= 0 && u >= 0 && v >= 0 && w >= 0;
+    hitInfo.point = ray.origin + ray.dir * dst;
+    hitInfo.normal = normalVec;
+    hitInfo.dst = dst;
+
+	return hitInfo;
+}
 
 vec3 getBackground(Ray ray)
 {
@@ -189,6 +230,48 @@ HitInfo calculateRayCollision(Ray ray)
 	hitInfo.dst = 9e9;
 
 
+    // go over meshes
+    for (int meshIndex = 0; meshIndex < meshes.length(); meshIndex++)
+    {
+        MeshInfo mesh = meshes[meshIndex];
+        if (!hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
+		{
+			continue;
+		}
+
+        for (int i = 0; i < mesh.triangleCount; i++)
+        {
+            uint triIndex = mesh.triangleIndex + i;
+            Triangle tri = triangles[triIndex];
+            TriangleHitInfo hit = hit_triangle(ray, tri);
+
+            if (hit.hit)
+			{
+                hitInfo.hit = true;
+                hitInfo.dst = 0;
+                hitInfo.material = Material(vec4(1), vec3(0), 0);
+                hitInfo.point = hit.point;
+                hitInfo.normal = hit.normal;
+			}
+        }
+
+    }
+
+            // check triangles
+        for (int i = 0; i < triangles.length(); i++)
+        {
+            TriangleHitInfo hit = hit_triangle(ray, triangles[i]);
+            if (hit.hit)
+            {
+                hitInfo.hit = true;
+                hitInfo.dst = 0;
+                hitInfo.material = Material(vec4(1), vec3(0), 0);
+                hitInfo.point = hit.point;
+                hitInfo.normal = hit.normal;
+            }
+        }
+
+
     // Check spheres
 	for (int i = 0; i < spheres.length(); i++)
 	{
@@ -208,14 +291,29 @@ vec3 rayTrace(Ray ray)
     vec3 incomingLight = vec3(0);
     vec3 rayColor = vec3(1);
 
-    for (int i = 0; i < meshes.length(); i++)
-    {
-        MeshInfo mesh = meshes[i];
-		if (hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
+    // check triangles
+    for (int i = 0; i < triangles.length(); i++)
+	{
+		TriangleHitInfo hit = hit_triangle(ray, triangles[i]);
+		if (hit.hit)
 		{
-			return vec3(1,0,0);
+			return vec3(1, 1, 0);
 		}
+	}
+
+
+    // check meshes
+    for (int meshIndex = 0; meshIndex < meshes.length(); meshIndex++)
+    {
+        MeshInfo mesh = meshes[meshIndex];
+        if (!hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
+		{
+			continue;
+		}
+        return vec3(0, 1, 0);
     }
+
+
 
     for (int i = 0; i < maxDepth; i++)
 	{
@@ -230,7 +328,7 @@ vec3 rayTrace(Ray ray)
             Material material = hitInfo.material;
             vec3 emittedLight = material.emissionStrength * material.emission;
             float lightStrength = dot(ray.dir, hitInfo.normal);
-            incomingLight += emittedLight * rayColor.xyz * lightStrength * 2;
+            incomingLight += emittedLight * rayColor.xyz * lightStrength * 2 * material.color.z;
             rayColor *= material.color.xyz ;
 
 

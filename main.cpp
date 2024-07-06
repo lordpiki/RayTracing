@@ -331,9 +331,21 @@ int main() {
     {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
     };
 
-    MeshInfo mesh = { vec3(-1.0f, -1.0f, -3.0f), 13, {vec4(1, 0, 0.1, 1), vec3(0), 0}, vec3(1.0f, 1.0f, 1.0f), 2 };
+    
+    vector<Triangle> triangles = {
+		{vec3(0), vec3(1,1,5), vec3(2)},
+        //{vec3(2), vec3(3,2,4), vec3(4)},
+        //{vec3(4, 2, 4), vec3(10,4,1), vec3(0, 1, 9.3)},
+	};
+    
+
+    MeshInfo mesh = { vec3(0), 0, {vec4(1, 0, 0.1, 0.5), vec3(0), 0}, vec3(0), 0 };
+    mesh.addTriangleVec(triangles);
     vector<MeshInfo> meshes;
     meshes.push_back(mesh);
+
+    loadSphereConfiguration(spheres, "conf");
+
 
 
     // Variables for FPS calculation
@@ -384,10 +396,14 @@ int main() {
 
          //Update camera and spheres in the RayTracer
         rayTracer.updateCamera(camera);
+        
         rayTracer.updateSpheres(spheres);
         rayTracer.updateMeshes(meshes);
+        rayTracer.updateTriangles(triangles);
+
         rayTracer.setMaxDepth(maxDepth);
         rayTracer.setRaysPerPixel(raysPerPixel);
+
         rayTracer.render(frameNum, randomSeed);
         frameNum++;
         imgui_end_loop(window);
