@@ -11,6 +11,9 @@
 #include <fstream>
 #include <string>
 #include <math.h>
+#include <sstream>
+#include <algorithm>
+
 
 // imgui includes
 #include "imgui.h"
@@ -197,7 +200,7 @@ static void handleKeyboardAndMouse(GLFWwindow* window, Camera& camera, int fps, 
     camera.lookfrom = camera.center;
 
     if (center_movement != vec3(0.0f))
-		frameNum = 0;
+        frameNum = 0;
 
     // check if user is dragging the mouse
     if (ImGui::IsMouseDragging(1, 0.0f))
@@ -272,7 +275,7 @@ static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
     char fileName[128] = "conf";
     ImGui::InputText("File Name", fileName, 128);
     if (ImGui::Button("Save"))
-		saveSphereConfiguration(spheres, fileName);
+        saveSphereConfiguration(spheres, fileName);
     if (ImGui::Button("Load"))
         loadSphereConfiguration(spheres, fileName);
 
@@ -305,7 +308,40 @@ static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
     ImGui::End();
 }
 
+std::vector<Triangle> parseOBJForTriangles(const std::string& filename) {
+    std::ifstream file(filename);
+    std::vector<vec3> vertices;
+    std::vector<Triangle> triangles;
+    std::string line;
 
+    while (std::getline(file, line)) {
+        if (line.substr(0, 2) == "v ") {
+            std::istringstream s(line.substr(2));
+            vec3 v;
+            s >> v.x;
+            s >> v.y;
+            s >> v.z;
+            vertices.push_back(v);
+        }
+        else if (line.substr(0, 2) == "f ") {
+            std::istringstream s(line.substr(2));
+            std::vector<int> indices;
+            std::string vertex;
+            while (s >> vertex) {
+                std::istringstream vertexStream(vertex);
+                int index;
+                char discard;
+                vertexStream >> index >> discard >> discard >> discard;
+                indices.push_back(index - 1); // Convert to 0-based index
+            }
+            // Create triangles using fan triangulation
+            for (size_t i = 1; i + 1 < indices.size(); ++i) {
+                triangles.emplace_back(vertices[indices[0]], vertices[indices[i]], vertices[indices[i + 1]]);
+            }
+        }
+    }
+    return triangles;
+}
 
 int main() {
 
@@ -331,17 +367,20 @@ int main() {
     {vec3(0.0f, 20.5f, -4.0f), 20.0f, {vec4(0.5, 0.9, 0.1, 1), vec3(0), 0}}
     };
 
-    
-    vector<Triangle> triangles = {
-		{vec3(0), vec3(1,1,5), vec3(2)},
-        //{vec3(2), vec3(3,2,4), vec3(4)},
-        //{vec3(4, 2, 4), vec3(10,4,1), vec3(0, 1, 9.3)},
-	};
-    
 
-    MeshInfo mesh = { vec3(0), 0, {vec4(1, 0, 0.1, 0.5), vec3(0), 0}, vec3(0), 0 };
+    vector<Triangle> triangles = parseOBJForTriangles("dog.obj");
+    for (auto& tri : triangles) {
+		tri.posA *= 0.1f;
+		tri.posB *= 0.1f;
+		tri.posC *= 0.1f;
+	}
+
+
+    MeshInfo mesh;
     mesh.addTriangleVec(triangles);
     vector<MeshInfo> meshes;
+
+    mesh.rotateMesh(triangles, 90, 0);
     meshes.push_back(mesh);
 
     loadSphereConfiguration(spheres, "conf");
@@ -394,9 +433,9 @@ int main() {
         glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-         //Update camera and spheres in the RayTracer
+        //Update camera and spheres in the RayTracer
         rayTracer.updateCamera(camera);
-        
+
         rayTracer.updateSpheres(spheres);
         rayTracer.updateMeshes(meshes);
         rayTracer.updateTriangles(triangles);

@@ -161,7 +161,6 @@ void RayTracer::updateTriangles(const vector<Triangle>& triangles)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_triangleBuffer);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, triangles.size() * sizeof(Triangle), triangles.data(), GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_triangleBuffer);
-
 }
 
 
@@ -170,7 +169,6 @@ void RayTracer::updateMeshes(const vector<MeshInfo>& meshes)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_meshBuffer);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, meshes.size() * sizeof(MeshInfo), meshes.data(), GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_meshBuffer);
-
 }
 
 void RayTracer::setMaxDepth(int depth) {

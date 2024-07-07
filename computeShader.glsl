@@ -3,16 +3,21 @@ layout (local_size_x = 16, local_size_y = 16) in;
 layout (rgba32f, binding = 0) uniform image2D imgOutput;
 layout (rgba32f, binding = 1) uniform image2D imgAccumulation;
 
+#define RED vec3(1,0,0);
+#define GREEN vec3(0,1,0);
+#define BLUE vec3(0,0,1);
+#define WHITE vec3(1,1,1);
+#define BLACK vec3(0,0,0);
+#define PURPLE vec3(1,0,1);
+
+
 struct Material {
     vec4 color;
     vec3 emission;
     float emissionStrength;
 };
 
-struct Triangle{
-    vec3 posA, posB, posC;
-    //vec3 normalA, normalB, normalC;
-};
+
 
 struct MeshInfo {
     vec3 boundsMin;
@@ -28,6 +33,16 @@ struct Sphere {
     float radius;
     Material material;
 };
+
+struct Triangle {
+	vec3 posA;
+	float padd1;
+	vec3 posB;
+	float padd2;
+	vec3 posC;
+	float padd3;
+    //vec3 normalA, normalB, normalC;
+    };
 
 struct Ray {
 	vec3 origin;
@@ -61,7 +76,7 @@ layout (std430, binding = 1) buffer MeshBuffer {
 	MeshInfo meshes[];
 };
 
-layout (std430, binding = 2) buffer TriangleBuffer {
+layout (std140, binding = 2) buffer TriangleBuffer {
 	Triangle triangles[];
 };
 
@@ -249,28 +264,15 @@ HitInfo calculateRayCollision(Ray ray)
 			{
                 hitInfo.hit = true;
                 hitInfo.dst = 0;
-                hitInfo.material = Material(vec4(1), vec3(0), 0);
+                hitInfo.material = Material(vec4(0,1,0,1), vec3(0), 0);
                 hitInfo.point = hit.point;
                 hitInfo.normal = hit.normal;
 			}
         }
 
+
+
     }
-
-            // check triangles
-        for (int i = 0; i < triangles.length(); i++)
-        {
-            TriangleHitInfo hit = hit_triangle(ray, triangles[i]);
-            if (hit.hit)
-            {
-                hitInfo.hit = true;
-                hitInfo.dst = 0;
-                hitInfo.material = Material(vec4(1), vec3(0), 0);
-                hitInfo.point = hit.point;
-                hitInfo.normal = hit.normal;
-            }
-        }
-
 
     // Check spheres
 	for (int i = 0; i < spheres.length(); i++)
@@ -292,15 +294,13 @@ vec3 rayTrace(Ray ray)
     vec3 rayColor = vec3(1);
 
     // check triangles
-    for (int i = 0; i < triangles.length(); i++)
+    for (int i = 0; i < triangles.length()  +1; i++)
 	{
-		TriangleHitInfo hit = hit_triangle(ray, triangles[i]);
+		Triangle tri = triangles[i];
+		TriangleHitInfo hit = hit_triangle(ray, tri);
 		if (hit.hit)
-		{
-			return vec3(1, 1, 0);
-		}
-	}
-
+        return RED;
+    }
 
     // check meshes
     for (int meshIndex = 0; meshIndex < meshes.length(); meshIndex++)
@@ -310,10 +310,8 @@ vec3 rayTrace(Ray ray)
 		{
 			continue;
 		}
-        return vec3(0, 1, 0);
-    }
-
-
+        return PURPLE;
+}
 
     for (int i = 0; i < maxDepth; i++)
 	{
@@ -335,9 +333,14 @@ vec3 rayTrace(Ray ray)
 		}
 		else
 		{
+            if (i == 0)
+			{
+				return getBackground(ray);
+			}
 			break;
 		}
 	}
+
 
     return incomingLight;
 }
@@ -375,7 +378,13 @@ void main()
 
     vec3 oldLight = imageLoad(imgAccumulation, pixelCoords).xyz;
     totalIncomingLight = blendLight(oldLight, totalIncomingLight, frameNum);
-    
+
+    if (triangles[0].posB == vec3(2,-4,2))
+    {
+        totalIncomingLight = RED;
+	
+    }
+
     imageStore(imgAccumulation, pixelCoords, vec4(totalIncomingLight, 1.0));
     imageStore(imgOutput, pixelCoords, vec4(totalIncomingLight, 1.0));
 }
