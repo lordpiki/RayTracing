@@ -23,6 +23,8 @@ public:
     void updateSpheres(const vector<Sphere>& spheres);
     void updateTriangles(const vector<Triangle>& triangles);
 
+    void setDimentions(int width, int height);
+
 private:
     bool loadComputeShader();
     bool loadRenderShader();

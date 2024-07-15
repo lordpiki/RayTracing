@@ -14,6 +14,8 @@ struct Triangle {
 	float padd2;
 	vec3 posC;
 	float padd3;
+
+
     //vec3 normalA, normalB, normalC;
 
 	Triangle() : posA(0), posB(0), posC(0), padd1(0), padd2(0), padd3(0) {}
@@ -32,6 +34,13 @@ struct MeshInfo {
 	unsigned int triangleIndex;
 
 	MeshInfo() : boundsMin(0), triangleCount(0), material(), boundsMax(0), triangleIndex(0) {}
+
+	void updateBoundingBox(const vector<Triangle>& triangles)
+	{
+		// Go over all triangles, and update the bounding box
+		triangleCount = 0;
+		addTriangleVec(triangles);
+	}
 
     bool operator==(const MeshInfo& other) const
 	{
@@ -70,6 +79,21 @@ struct MeshInfo {
 
 	}
 
+	void scaleMesh(vector<Triangle>& triangles, float scale)
+	{
+		// scaling the triangles
+		for (Triangle& tri : triangles)
+		{
+			tri.posA *= scale;
+			tri.posB *= scale;
+			tri.posC *= scale;
+		}
+
+		// scaling the bounding box
+		boundsMin *= scale;
+		boundsMax *= scale;
+	}
+
 	// axis = 0 -> x, axis = 1 -> y, axis = 2 -> z
 	void rotateMesh(vector<Triangle>& triangles, int degrees, int axis)
 	{
@@ -81,8 +105,6 @@ struct MeshInfo {
 			tri.posB = rotatePoint(tri.posB, radians, axis);
 			tri.posC = rotatePoint(tri.posC, radians, axis);
 		}
-
-		triangleCount = 0;
 
 		std::cout << "bounding box before rotation: " << boundsMin.x << " " << boundsMin.y << " " << boundsMin.z << " " << boundsMax.x << " " << boundsMax.y << " " << boundsMax.z << std::endl;
 		//addTriangleVec(triangles);

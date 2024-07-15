@@ -308,6 +308,39 @@ static void showSphereEdit(bool& showSphereEdit, vector<Sphere>& spheres)
     ImGui::End();
 }
 
+static void showTriangleEdit(bool& showTriangleEdit, vector<Triangle>& triangles)
+{
+	ImGui::Begin("Triangles");
+
+	auto triangleCopy = triangles;
+
+	if (ImGui::Button("Add Triangle"))
+	{
+		Triangle newTriangle;
+		newTriangle.posA = vec3(0.0f);
+		newTriangle.posB = vec3(1.0f, 0.0f, 0.0f);
+		newTriangle.posC = vec3(0.0f, 1.0f, 0.0f);
+		triangles.push_back(newTriangle);
+	}
+
+	for (int i = 0; i < triangles.size(); i++)
+	{
+		ImGui::Text("Triangle %d", i);
+		ImGui::SliderFloat3(("PosA##" + std::to_string(i)).c_str(), &triangles[i].posA[0], -20.0f, 20.0f);
+		ImGui::SliderFloat3(("PosB##" + std::to_string(i)).c_str(), &triangles[i].posB[0], -20.0f, 20.0f);
+		ImGui::SliderFloat3(("PosC##" + std::to_string(i)).c_str(), &triangles[i].posC[0], -20.0f, 20.0f);
+
+		if (ImGui::Button(("Remove##" + std::to_string(i)).c_str()))
+		{
+			triangles.erase(triangles.begin() + i);
+			i--;
+		}
+	}
+	if (triangleCopy != triangles)
+		frameNum = 0;
+	ImGui::End();
+}
+
 std::vector<Triangle> parseOBJForTriangles(const std::string& filename) {
     std::ifstream file(filename);
     std::vector<vec3> vertices;
@@ -323,6 +356,15 @@ std::vector<Triangle> parseOBJForTriangles(const std::string& filename) {
             s >> v.z;
             vertices.push_back(v);
         }
+        else if (line.substr(0,2) == "vn")
+        {
+		    std::istringstream s(line.substr(3));
+		    vec3 v;
+		    s >> v.x;
+		    s >> v.y;
+		    s >> v.z;
+		    vertices.push_back(v);
+		}
         else if (line.substr(0, 2) == "f ") {
             std::istringstream s(line.substr(2));
             std::vector<int> indices;
@@ -368,20 +410,23 @@ int main() {
     };
 
 
-    vector<Triangle> triangles = parseOBJForTriangles("dog.obj");
-    for (auto& tri : triangles) {
-		tri.posA *= 0.1f;
-		tri.posB *= 0.1f;
-		tri.posC *= 0.1f;
-	}
+    //vector<Triangle> triangles = parseOBJForTriangles("dog.obj");
+
+    vector<Triangle> triangles;
+    Triangle tri(vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0));
+    triangles.push_back(tri);
 
 
     MeshInfo mesh;
     mesh.addTriangleVec(triangles);
     vector<MeshInfo> meshes;
+    mesh.material = { vec4(1, 0.5, 0.2, 1), vec3(0), 0 };
 
-    mesh.rotateMesh(triangles, 90, 0);
+    //mesh.rotateMesh(triangles, 90, 0);
+    //mesh.scaleMesh(triangles, 0.05);
+
     meshes.push_back(mesh);
+
 
     loadSphereConfiguration(spheres, "conf");
 
@@ -393,6 +438,7 @@ int main() {
     double lastX = 0, lastY = 0;
 
     bool showSphereEditBool = false;
+    bool showTriangleEditBool = false;
 
     int maxDepth = 2;
     int raysPerPixel = 1;
@@ -419,6 +465,19 @@ int main() {
             if (showSphereEditBool)
                 showSphereEdit(showSphereEditBool, spheres);
 
+            ImGui::Checkbox("Show triangles window", &showTriangleEditBool);
+            if (showTriangleEditBool)
+				showTriangleEdit(showTriangleEditBool, triangles);
+
+            if (frameNum == 0)
+            {
+                // Go over all meshes and update the bounding boxes
+                for (auto& mesh : meshes)
+                {
+                    mesh.updateBoundingBox(triangles);
+                }
+            }
+
             ImGui::SliderInt("Max Depth", &maxDepth, 2, 30);
             ImGui::SliderInt("Rays Per Pixel", &raysPerPixel, 1, 100);
 
@@ -426,12 +485,6 @@ int main() {
 
             ImGui::End();
         }
-
-        GLuint sphereBuffer;
-        glGenBuffers(1, &sphereBuffer);
-        glBindBuffer(GL_UNIFORM_BUFFER, sphereBuffer);
-        glBufferData(GL_UNIFORM_BUFFER, spheres.size() * sizeof(Sphere), spheres.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
         //Update camera and spheres in the RayTracer
         rayTracer.updateCamera(camera);

@@ -163,6 +163,12 @@ void RayTracer::updateTriangles(const vector<Triangle>& triangles)
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, m_triangleBuffer);
 }
 
+void RayTracer::setDimentions(int width, int height)
+{
+    m_width = width;
+	m_height = height;
+}
+
 
 void RayTracer::updateMeshes(const vector<MeshInfo>& meshes)
 {

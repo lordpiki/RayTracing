@@ -40,6 +40,13 @@ public:
 		update_view();
 	}
 
+	void setDimensions(int width_, int height_)
+	{
+		width = width_;
+		height = height_;
+		update_view();
+	}
+
     void update_view()
     {
 		//dir = unit_vector(lookfrom - lookat);

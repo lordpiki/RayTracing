@@ -154,32 +154,45 @@ bool hit_mesh(Ray ray, vec3 boundsMin, vec3 boundsMax)
 
 TriangleHitInfo hit_triangle(Ray ray, Triangle tri)
 {
-	vec3 edge1 = tri.posB - tri.posA;
-	vec3 edge2 = tri.posC - tri.posA;
-    vec3 normalVec = cross(edge1, edge2);
-    vec3 ao = ray.origin - tri.posA;
-    vec3 dao = cross(ao, ray.dir);
+    const float EPSILON = 1e-8;
+    vec3 edge1 = tri.posB - tri.posA;
+    vec3 edge2 = tri.posC - tri.posA;
+    vec3 h = cross(ray.dir, edge2);
+    float a = dot(edge1, h);
 
-    
-
-    float determ = -dot(ray.dir, normalVec);
-    float invDet = 1 / determ;
-
-    // Calculate dst to triangle & barycentric coordinates of intersection point
-    float dst = dot(ao, normalVec) * invDet;
-    float u = dot(edge2, dao) * invDet;
-    float v = -dot(edge1, dao) * invDet;
-    float w = 1 - u - v;
-
-
-    // Initialize hit info
     TriangleHitInfo hitInfo;
-    hitInfo.hit =  dst >= 0 && u >= 0 && v >= 0 && w >= 0;
-    hitInfo.point = ray.origin + ray.dir * dst;
-    hitInfo.normal = normalVec;
-    hitInfo.dst = dst;
+    hitInfo.hit = false;
 
-	return hitInfo;
+    if (abs(a) < EPSILON)
+        return hitInfo; // Ray is parallel to the triangle
+
+    float f = 1.0 / a;
+    vec3 s = ray.origin - tri.posA;
+    float u = f * dot(s, h);
+
+    if (u < 0.0 || u > 1.0)
+        return hitInfo;
+
+    vec3 q = cross(s, edge1);
+    float v = f * dot(ray.dir, q);
+
+    if (v < 0.0 || u + v > 1.0)
+        return hitInfo;
+
+    float t = f * dot(edge2, q);
+
+    if (t > EPSILON)
+    {
+        hitInfo.hit = true;
+        hitInfo.dst = t;
+        hitInfo.point = ray.origin + ray.dir * t;
+        hitInfo.normal = normalize(cross(edge1, edge2));
+
+        if (dot(ray.dir, hitInfo.normal) > 0)
+            hitInfo.normal = -hitInfo.normal;
+    }
+
+    return hitInfo;
 }
 
 vec3 getBackground(Ray ray)
@@ -191,10 +204,10 @@ vec3 getBackground(Ray ray)
 
 
 float rand() {
-    float x = float(pixelCoords.x) / 1280.0f;
-    float y = float(pixelCoords.y) / 720.0f;
+    float x = float(pixelCoords.x) / 1000.0f;
+    float y = float(pixelCoords.y) / 1000.0f;
     vec2 co = vec2(x, y);
-    co.x *= seed + seed * randomSeed ;
+    co.x *= seed + randomSeed * seed;
     seed += 1;
     return 2 * (fract(sin(dot(co ,vec2(12.9898,78.233))) * 43758.5453) -0.5);
 }
@@ -218,25 +231,6 @@ vec3 random_on_hemisphere(const vec3 normal)
 	return -on_unit_sphere;
 }
 
-vec3 getEnviromentLight(Ray ray)
-{
-	vec3 skyColorHorizon = vec3(0.5, 0.7, 1.0);
-    vec3 skyColorZenith = vec3(0.1, 0.1, 0.1);
-    vec3 sunLightDir = (vec3(-0.5, -0.5, 0.5));
-    float sunFocus = 0.1;
-    float sunIntensity = 1.0;
-    vec3 groundColor = vec3(0.3, 0.3, 0.3);
-
-    float skyGradientT = pow(smoothstep(0.0, 0.4, ray.dir.y), 0.35);
-    vec3 skyGradient = mix(skyColorZenith, skyColorHorizon, skyGradientT);
-    float sun = pow(max(0, dot(ray.dir, -sunLightDir)), sunFocus) * sunIntensity;
-
-    // Combine ground and sky
-    float groundT = smoothstep(-0.01, 0, ray.dir.y);
-    float sunMask = float(groundT >= 1);
-    return mix(groundColor, skyGradient, groundT) + sunMask * sun;
-}
-
 
 HitInfo calculateRayCollision(Ray ray)
 {
@@ -244,35 +238,56 @@ HitInfo calculateRayCollision(Ray ray)
 	hitInfo.hit = false;
 	hitInfo.dst = 9e9;
 
+    // go over triangles
+    for (int i = 0; i < triangles.length(); i++)
+	{
+		Triangle tri = triangles[i];
+		TriangleHitInfo hit = hit_triangle(ray, tri);
 
-    // go over meshes
+		if (hit.hit && hit.dst < hitInfo.dst)
+        {
+            hitInfo.hit = true;
+			hitInfo.dst = hit.dst;
+			hitInfo.material = meshes[0].material;
+			hitInfo.point = hit.point;
+			hitInfo.normal = hit.normal;
+		}
+        }
+
+        // go over meshes
+        if (false)
+        {
     for (int meshIndex = 0; meshIndex < meshes.length(); meshIndex++)
     {
         MeshInfo mesh = meshes[meshIndex];
-        if (!hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
-		{
-			continue;
-		}
+
 
         for (int i = 0; i < mesh.triangleCount; i++)
         {
             uint triIndex = mesh.triangleIndex + i;
             Triangle tri = triangles[triIndex];
             TriangleHitInfo hit = hit_triangle(ray, tri);
+            if (!hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
+		    {
+			    continue;
+		    }
 
-            if (hit.hit)
+            if (hit.hit && hit.dst < hitInfo.dst)
 			{
                 hitInfo.hit = true;
-                hitInfo.dst = 0;
-                hitInfo.material = Material(vec4(0,1,0,1), vec3(0), 0);
+                hitInfo.dst = hit.dst;
+                hitInfo.material = mesh.material;
                 hitInfo.point = hit.point;
                 hitInfo.normal = hit.normal;
+                if (dot(ray.dir, hit.normal) > 0)
+                {
+                    hitInfo.normal = -hit.normal;
+				}
 			}
         }
-
-
-
     }
+    }
+    
 
     // Check spheres
 	for (int i = 0; i < spheres.length(); i++)
@@ -293,26 +308,6 @@ vec3 rayTrace(Ray ray)
     vec3 incomingLight = vec3(0);
     vec3 rayColor = vec3(1);
 
-    // check triangles
-    for (int i = 0; i < triangles.length()  +1; i++)
-	{
-		Triangle tri = triangles[i];
-		TriangleHitInfo hit = hit_triangle(ray, tri);
-		if (hit.hit)
-        return RED;
-    }
-
-    // check meshes
-    for (int meshIndex = 0; meshIndex < meshes.length(); meshIndex++)
-    {
-        MeshInfo mesh = meshes[meshIndex];
-        if (!hit_mesh(ray, mesh.boundsMin, mesh.boundsMax))
-		{
-			continue;
-		}
-        return PURPLE;
-}
-
     for (int i = 0; i < maxDepth; i++)
 	{
 		HitInfo hitInfo = calculateRayCollision(ray);
@@ -322,11 +317,9 @@ vec3 rayTrace(Ray ray)
 			ray.origin = hitInfo.point;
             ray.dir = normalize(hitInfo.normal + random_vec3());
 
-
             Material material = hitInfo.material;
             vec3 emittedLight = material.emissionStrength * material.emission;
-            float lightStrength = dot(ray.dir, hitInfo.normal);
-            incomingLight += emittedLight * rayColor.xyz * lightStrength * 2 * material.color.z;
+            incomingLight += emittedLight * rayColor.xyz;
             rayColor *= material.color.xyz ;
 
 
@@ -350,6 +343,11 @@ Ray createRay(int x, int y)
 {
     vec3 pixel_center = pixel00_loc + (x * pixel_delta_u) + (y * pixel_delta_v);
     vec3 ray_dir = pixel_center - center;
+
+    // randomize ray just a little bit
+    ray_dir += random_vec3() * 0.002;
+
+
     Ray r = Ray(center, ray_dir);
     return r;
 }
@@ -376,14 +374,9 @@ void main()
     }
     totalIncomingLight /= float(raysPerPixel);
 
+
     vec3 oldLight = imageLoad(imgAccumulation, pixelCoords).xyz;
     totalIncomingLight = blendLight(oldLight, totalIncomingLight, frameNum);
-
-    if (triangles[0].posB == vec3(2,-4,2))
-    {
-        totalIncomingLight = RED;
-	
-    }
 
     imageStore(imgAccumulation, pixelCoords, vec4(totalIncomingLight, 1.0));
     imageStore(imgOutput, pixelCoords, vec4(totalIncomingLight, 1.0));
